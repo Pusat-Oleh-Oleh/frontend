@@ -176,6 +176,7 @@ const ProductCard = ({ product }) => {
 };
 
 const Products = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState('Semua');
@@ -183,10 +184,10 @@ const Products = () => {
 
   // Definisikan kategori yang ingin ditampilkan untuk "Semua"
   const featuredCategories = [
-    '6785f0775a994cdd532040ad', // Makanan
+    '6927028b485f846a284528fb', // Makanan
     '6785f09d5a994cdd532040b0', // Aksesoris
     '6785f0d35a994cdd532040b3',  // Souvenir
-    '6785f0eb5a994cdd532040b6', // Kerajinan
+    '692703a1485f846a28452983', // Kerajinan
     '6785f0fc5a994cdd532040b9', // Batik
     // Tambahkan ID kategori lain sesuai kebutuhan
   ];
@@ -237,29 +238,17 @@ const Products = () => {
       try {
         if (activeCategory === 'Semua') {
           // Fetch products dari multiple kategori
-          const responses = await Promise.all(
-            featuredCategories.map(categoryId =>
-              axios.get(`${apiUrl}/category/${categoryId}`)
-            )
+          const response = await axios.get(`${apiUrl}/product/public`);
+          const data = response.data?.products || [];
+
+          setProducts(
+            data.slice(0, 12).map(product => ({
+             ...product,
+             cover: product.cover
+              ? { ...product.cover, url: normalizeUrl(product.cover.url) }
+              : null             
+            })) 
           );
-
-          // Gabungkan semua produk dari berbagai kategori
-          const allProducts = responses.flatMap(response => 
-            response.data.products.map(product => ({
-              ...product,
-              cover: {
-                ...product.cover,
-                url: normalizeUrl(product.cover?.url)
-              }
-            }))
-          );
-
-          // Acak urutan produk dan ambil maksimal 12 produk
-          const shuffledProducts = allProducts
-            .sort(() => Math.random() - 0.5)
-            .slice(0, 12);
-
-          setProducts(shuffledProducts);
         } else {
           // Fetch products untuk kategori spesifik (kode yang sudah ada)
           const response = await axios.get(`${apiUrl}/category/${activeCategory}`);
@@ -337,7 +326,11 @@ const Products = () => {
           )}
 
           <div className="text-center mt-8 sm:mt-12">
-            <button className="inline-flex items-center justify-center space-x-2 bg-white text-[#4F46E5] font-medium px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-[#4F46E5] hover:bg-[#4F46E5] hover:text-white transition-all duration-300 shadow-lg shadow-indigo-500/10 group">
+            <button 
+              onClick={() => navigate('/all-products')} 
+              
+              className="inline-flex items-center justify-center space-x-2 bg-white text-[#4F46E5] font-medium px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-[#4F46E5] hover:bg-[#4F46E5] hover:text-white transition-all duration-300 shadow-lg shadow-indigo-500/10 group"
+            >
               <span>Lihat Semua Produk</span>
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 transform transition-transform duration-300 group-hover:translate-x-1" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />

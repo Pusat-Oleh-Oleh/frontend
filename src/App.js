@@ -18,6 +18,7 @@ import Transaction from "./pages/transaction";
 import WishlistPage from "./pages/wishlist";
 import ProtectedRoute from "./components/protectedroute";
 import ArticleDetail from './pages/articledetail';
+import AllProducts from './pages/AllProducts';
 
 function App() {
   return (
@@ -34,6 +35,10 @@ function App() {
           <Route path="/product/:productId" element={<ProductDetail />} />
           <Route path="/articlehomepage" element={<ArticlePage />} />
           <Route path="/articleview/:articleId" element={<ArticleDetail />} />
+          {/* Protected All Products (Login Required) */}
+          <Route element={<ProtectedRoute allowedRoles={["buyer", "seller"]} />}>
+             <Route path="/all-products" element={<AllProducts />} />
+          </Route>
 
           {/* Protected Seller Routes */}
           <Route element={<ProtectedRoute allowedRoles={["seller"]} />}>

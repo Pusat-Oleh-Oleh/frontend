@@ -206,7 +206,11 @@ function Nav() {
               </form>
 
               <div className="flex items-center space-x-4">
-                <button className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all">
+                
+
+                {isAuthenticated ? (
+                <>
+                  <button className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all">
                   <BellIcon className="h-6 w-6" />
                 </button>
                 <button className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all">
@@ -223,8 +227,6 @@ function Nav() {
                     </span>
                   )}
                 </button>
-
-                {isAuthenticated ? (
                   <div 
                     ref={dropdownRef} 
                     className="relative"
@@ -256,6 +258,7 @@ function Nav() {
                       />
                     )}
                   </div>
+                  </>
                 ) : (
                   <button
                     onClick={handleLoginRedirect}
@@ -322,6 +325,9 @@ function Nav() {
               </div>
 
               <div className="flex justify-between items-center">
+                {isAuthenticated ? (
+              <>
+                 
                 <div className="flex space-x-4">
                   <button className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all">
                     <BellIcon className="h-6 w-6" />
@@ -341,8 +347,6 @@ function Nav() {
                     )}
                   </button>
                 </div>
-
-                {isAuthenticated ? (
                   <div 
                     ref={dropdownRef} 
                     className="relative"
@@ -374,6 +378,7 @@ function Nav() {
                       />
                     )}
                   </div>
+                  </>
                 ) : (
                   <button
                     onClick={() => {

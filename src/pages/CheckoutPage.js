@@ -45,7 +45,7 @@ const CheckoutPage = () => {
       minPurchase: 100000,
       maxDiscount: 50000,
       stackable: true,
-      expiryDate: "2025-06-30",
+      expiryDate: "2026-06-30",
       createdAt: "2025-01-01"
     },
     {
@@ -69,7 +69,7 @@ const CheckoutPage = () => {
       minPurchase: 50000,
       maxDiscount: 30000,
       stackable: true,
-      expiryDate: "2025-04-30",
+      expiryDate: "2026-04-30",
       createdAt: "2025-01-10"
     },
     {
@@ -81,7 +81,7 @@ const CheckoutPage = () => {
       minPurchase: 200000,
       maxDiscount: 75000,
       stackable: true,
-      expiryDate: "2025-05-31",
+      expiryDate: "2026-05-31",
       createdAt: "2025-01-03"
     },
     {
