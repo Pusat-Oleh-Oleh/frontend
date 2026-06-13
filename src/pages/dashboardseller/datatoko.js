@@ -6,6 +6,7 @@ import { faPlus, faPencilAlt, faTrash } from '@fortawesome/free-solid-svg-icons'
 import axios from 'axios';
 import { AuthContext } from '../../components/context/AuthContext';
 import { toast } from 'react-hot-toast';
+import LocationSearch from '../../components/common/LocationSearch';
 
 Modal.setAppElement('#root');
 
@@ -40,6 +41,17 @@ const DataToko = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  // State untuk fitur cek ongkir seller
+  const [ongkirDestination, setOngkirDestination] = useState('');
+  const [ongkirDestinationObj, setOngkirDestinationObj] = useState(null); // { destinationId, city, ... }
+  const [ongkirWeight, setOngkirWeight] = useState('');
+  const [ongkirLoading, setOngkirLoading] = useState(false);
+  const [ongkirResults, setOngkirResults] = useState(null);
+
+  // State untuk lokasi toko
+  const [selectedShopLocation, setSelectedShopLocation] = useState(null);
+  const [isSavingLocation, setIsSavingLocation] = useState(false);
 
   useEffect(() => {
     const fetchShopData = async () => {
@@ -92,8 +104,61 @@ const DataToko = () => {
     }));
   };
 
-  const toggleEdit = () => {
-    setIsEditing(!isEditing);
+  const toggleEdit = async () => {
+    if (!isEditing) {
+      // Masuk mode edit — inisialisasi selectedShopLocation dari data toko yang ada
+      const addr = shopDataState?.address;
+      if (addr?.city) {
+        setSelectedShopLocation({
+          destinationId: addr.destinationId || null,
+          province: addr.province || '',
+          city: addr.city || '',
+          district: addr.district || '',
+          subdistrict: addr.subdistrict || '',
+          postalCode: addr.postalCode || '',
+          label: [addr.subdistrict, addr.district, addr.city, addr.province, addr.postalCode]
+            .filter(Boolean).join(', '),
+        });
+      }
+      setIsEditing(true);
+      return;
+    }
+
+    // Simpan lokasi ke API
+    if (!selectedShopLocation?.city) {
+      toast.error('Pilih lokasi toko terlebih dahulu dari hasil pencarian.');
+      return;
+    }
+
+    setIsSavingLocation(true);
+    const toastId = toast.loading('Menyimpan lokasi toko...');
+    try {
+      const res = await axios.put(
+        `${apiUrl}/shop`,
+        {
+          address: {
+            province: selectedShopLocation.province,
+            city: selectedShopLocation.city,
+            district: selectedShopLocation.district,
+            subdistrict: selectedShopLocation.subdistrict,
+            postalCode: selectedShopLocation.postalCode,
+            destinationId: selectedShopLocation.destinationId,
+          }
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      if (res.data?.shop || res.data?.success) {
+        setShopData(prev => ({ ...prev, address: res.data.shop?.address || selectedShopLocation }));
+        toast.success('Lokasi toko berhasil disimpan!', { id: toastId });
+        setIsEditing(false);
+      } else {
+        toast.error('Respons server tidak valid.', { id: toastId });
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Gagal menyimpan lokasi toko.', { id: toastId });
+    } finally {
+      setIsSavingLocation(false);
+    }
   };
 
   const tambahCatatan = () => {
@@ -410,7 +475,7 @@ const DataToko = () => {
       {/* Tabs */}
       <div className="border-b border-gray-200">
         <div className="flex space-x-8">
-          {['Informasi', 'Lokasi', 'Catatan'].map((tab) => (
+          {['Informasi', 'Lokasi', 'Ongkir', 'Catatan'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -760,39 +825,223 @@ const DataToko = () => {
             </div>
           )}
 
-          {/* Tab Lokasi dengan styling yang diperbarui */}
+          {/* Tab Lokasi dengan LocationSearch */}
           {activeTab === 'Lokasi' && (
             <div className="p-6 space-y-6">
-              <h2 className="text-lg font-semibold text-gray-800">Lokasi Toko</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {Object.entries(lokasi).map(([key, value]) => (
-                  <div key={key}>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {key.charAt(0).toUpperCase() + key.slice(1)}
-                    </label>
-                    <input
-                      type="text"
-                      name={key}
-                      value={value}
-                      onChange={handleLokasiChange}
-                      className="w-full px-4 py-2 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] transition-all duration-200"
-                      readOnly={!isEditing}
-                    />
-                  </div>
-                ))}
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800">Lokasi Toko</h2>
+                <p className="text-sm text-gray-500 mt-1">
+                  Lokasi toko digunakan untuk menghitung ongkos kirim ke pembeli secara otomatis.
+                </p>
               </div>
-              <div className="flex justify-end">
+
+              {/* Tampilkan lokasi tersimpan saat tidak edit */}
+              {!isEditing && shopDataState?.address?.city && (
+                <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                  <p className="text-xs text-indigo-400 font-medium mb-2 uppercase tracking-wide">Lokasi Saat Ini</p>
+                  <div className="flex flex-wrap gap-1.5 text-sm text-indigo-700">
+                    {shopDataState.address.subdistrict && (
+                      <span className="bg-white px-2.5 py-1 rounded-lg border border-indigo-200">{shopDataState.address.subdistrict}</span>
+                    )}
+                    <span className="text-indigo-300">›</span>
+                    <span className="bg-white px-2.5 py-1 rounded-lg border border-indigo-200">{shopDataState.address.district}</span>
+                    <span className="text-indigo-300">›</span>
+                    <span className="bg-white px-2.5 py-1 rounded-lg border border-indigo-200">{shopDataState.address.city}</span>
+                    <span className="text-indigo-300">›</span>
+                    <span className="bg-white px-2.5 py-1 rounded-lg border border-indigo-200">{shopDataState.address.province}</span>
+                    {shopDataState.address.destinationId && (
+                      <span className="ml-auto text-xs bg-green-100 text-green-600 px-2 py-1 rounded-lg border border-green-200">✓ Terkoneksi RajaOngkir</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {!isEditing && !shopDataState?.address?.city && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                  ⚠️ Lokasi toko belum diatur. Klik <strong>Ubah Lokasi</strong> untuk mengisi.
+                </div>
+              )}
+
+              {/* Form edit lokasi */}
+              {isEditing && (
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Cari Kecamatan / Kota <span className="text-red-500">*</span>
+                  </label>
+                  <LocationSearch
+                    token={token}
+                    value={selectedShopLocation}
+                    onChange={setSelectedShopLocation}
+                    placeholder="Ketik nama kecamatan atau kota toko Anda..."
+                  />
+                  {!selectedShopLocation && (
+                    <p className="text-xs text-gray-400">
+                      Ketik minimal 2 huruf. Data lokasi dari database RajaOngkir — otomatis terkoneksi untuk hitung ongkir.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <div className="flex justify-end gap-3">
+                {isEditing && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(false)}
+                    className="px-6 py-2 rounded-xl font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all duration-200"
+                    disabled={isSavingLocation}
+                  >
+                    Batal
+                  </button>
+                )}
                 <button
                   onClick={toggleEdit}
+                  disabled={isSavingLocation}
                   className={`px-6 py-2 rounded-xl font-medium transition-all duration-200 ${
                     isEditing
-                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                      ? 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white hover:opacity-90 shadow-md shadow-indigo-500/30'
                       : 'bg-white border border-[#4F46E5] text-[#4F46E5] hover:bg-[#4F46E5] hover:text-white'
                   }`}
                 >
-                  {isEditing ? 'Simpan' : 'Ubah'}
+                  {isSavingLocation ? 'Menyimpan...' : isEditing ? 'Simpan Lokasi' : 'Ubah Lokasi'}
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Tab Ongkir — Cek ongkos kirim dari toko ini */}
+          {activeTab === 'Ongkir' && (
+            <div className="p-6 space-y-6">
+              <div>
+                <h2 className="text-lg font-semibold text-gray-800 mb-1">Cek Ongkos Kirim</h2>
+                <p className="text-sm text-gray-500">Simulasi ongkir dari toko Anda ke kota tujuan pembeli (real-time via RajaOngkir)</p>
+              </div>
+
+              {/* Info kota asal toko */}
+              {shopDataState?.address?.city ? (
+                <div className="flex items-center gap-2 px-4 py-2.5 bg-indigo-50 border border-indigo-100 rounded-xl text-sm">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#4F46E5]" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-gray-600">Kota asal toko:</span>
+                  <span className="font-semibold text-[#4F46E5]">{shopDataState.address.city}</span>
+                </div>
+              ) : (
+                <div className="px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+                  ⚠️ Kota toko belum diatur. Isi terlebih dahulu di tab <strong>Lokasi</strong>.
+                </div>
+              )}
+
+              {/* Form cek ongkir */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Kota / Kecamatan Tujuan</label>
+                  <LocationSearch
+                    token={token}
+                    value={ongkirDestinationObj}
+                    onChange={(loc) => {
+                      setOngkirDestinationObj(loc);
+                      setOngkirDestination(loc?.city || '');
+                    }}
+                    placeholder="Cari kecamatan atau kota tujuan..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Berat (gram)</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      min="1"
+                      value={ongkirWeight}
+                      onChange={(e) => setOngkirWeight(e.target.value)}
+                      placeholder="1000"
+                      className="flex-1 px-4 py-2.5 bg-white/50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#4F46E5]/20 focus:border-[#4F46E5] transition-all duration-200"
+                    />
+                    <button
+                      onClick={async () => {
+                        if (!shopDataState?._id) { toast.error('Data toko belum dimuat'); return; }
+                        if (!ongkirDestinationObj?.city || !ongkirWeight) { toast.error('Pilih kota tujuan dan isi berat'); return; }
+                        setOngkirLoading(true);
+                        setOngkirResults(null);
+                        try {
+                          const res = await axios.post(
+                            `${apiUrl}/courier/cost-by-shop`,
+                            {
+                              shopId: shopDataState._id,
+                              destination: ongkirDestinationObj.city,
+                              destinationId: ongkirDestinationObj.destinationId,
+                              weight: parseInt(ongkirWeight)
+                            },
+                            { headers: { Authorization: `Bearer ${token}` } }
+                          );
+                          setOngkirResults(res.data);
+                        } catch (err) {
+                          toast.error(err.response?.data?.message || 'Gagal menghitung ongkir');
+                        } finally {
+                          setOngkirLoading(false);
+                        }
+                      }}
+                      disabled={ongkirLoading || !shopDataState?.address?.city}
+                      className="px-5 py-2.5 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white rounded-xl hover:opacity-90 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-medium text-sm"
+                    >
+                      {ongkirLoading ? '...' : 'Cek'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Hasil ongkir */}
+              {ongkirResults && (
+                <div className="bg-white/60 rounded-xl border border-gray-100">
+                  <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
+                    <h3 className="font-semibold text-gray-800 text-sm">
+                      Hasil: {ongkirResults.origin} → {ongkirResults.destination}
+                      <span className="ml-2 text-gray-400 font-normal">({Number(ongkirResults.weight).toLocaleString('id-ID')}g)</span>
+                    </h3>
+                    <span className="text-xs text-gray-400">{ongkirResults.results?.length || 0} layanan ditemukan</span>
+                  </div>
+                  <div className="overflow-x-auto">
+                    {ongkirResults.results?.length === 0 ? (
+                      <div className="p-6 text-center text-gray-500 text-sm">Tidak ada layanan pengiriman yang tersedia untuk rute ini.</div>
+                    ) : (
+                      <table className="w-full text-sm">
+                        <thead className="text-xs uppercase text-gray-400 bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-2.5 text-left">Kurir</th>
+                            <th className="px-4 py-2.5 text-left">Layanan</th>
+                            <th className="px-4 py-2.5 text-left">Deskripsi</th>
+                            <th className="px-4 py-2.5 text-left">ETD</th>
+                            <th className="px-4 py-2.5 text-right">Ongkir</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {ongkirResults.results.map((r, i) => (
+                            <tr key={i} className={`hover:bg-gray-50 transition-colors ${i === 0 ? 'bg-green-50/60' : ''}`}>
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-1.5">
+                                  {i === 0 && (
+                                    <span className="text-[10px] px-1.5 py-0.5 bg-green-100 text-green-700 rounded-full font-medium">Termurah</span>
+                                  )}
+                                  <span className="font-medium text-gray-800">{r.courier}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                <span className="px-2 py-0.5 bg-indigo-50 text-[#4F46E5] rounded text-xs font-medium">{r.service}</span>
+                              </td>
+                              <td className="px-4 py-3 text-gray-500 text-xs">{r.description || '—'}</td>
+                              <td className="px-4 py-3 text-gray-500 text-xs">
+                                {r.etd && r.etd !== '-' ? `${r.etd} hari` : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-right">
+                                <span className="font-semibold text-[#4F46E5]">Rp{Number(r.cost).toLocaleString('id-ID')}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -19,6 +19,7 @@ import WishlistPage from "./pages/wishlist";
 import ProtectedRoute from "./components/protectedroute";
 import ArticleDetail from './pages/articledetail';
 import AllProducts from './pages/AllProducts';
+import PaymentStatus from './pages/PaymentStatus';
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/transaction" element={<Transaction />} />
+            <Route path="/payment/status" element={<PaymentStatus />} />
             <Route path="/wishlist" element={<WishlistPage />} />
           </Route>
         </Routes>

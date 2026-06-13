@@ -75,12 +75,19 @@ function ProductSection({ productData, onAddToCart }) {
           headers: { Authorization: `Bearer ${token}` }
         });
         
-        // Cek apakah produk ada di wishlist
-        const isProductInWishlist = Object.values(response.data.shopProductsX)
-          .flat()
-          .some(item => item.productId === productData._id);
+        // Safely check if product is in wishlist — handle various response shapes
+        let isInWishlist = false;
+        if (response.data && response.data.shopProductsX) {
+          isInWishlist = Object.values(response.data.shopProductsX)
+            .flat()
+            .some(item => item.productId === productData._id);
+        } else if (Array.isArray(response.data)) {
+          isInWishlist = response.data.some(
+            item => (item.productId?._id || item.productId) === productData._id
+          );
+        }
         
-        setLiked(isProductInWishlist);
+        setLiked(isInWishlist);
       } catch (error) {
         if (error.response?.status !== 404) { // Ignore 404 (empty wishlist)
           console.error("Error checking wishlist:", error);
@@ -106,20 +113,21 @@ function ProductSection({ productData, onAddToCart }) {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!isAuthenticated) {
       toast.error("Silakan login terlebih dahulu");
       navigate("/login");
-      return;
+      return false;
     }
     if (user?.role !== "buyer") {
       toast.error("Hanya pembeli yang dapat menambahkan ke keranjang");
-      return;
+      return false;
     }
-    onAddToCart(quantity);
+    // Call parent handler and return result
+    return await onAddToCart(quantity);
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!isAuthenticated) {
       toast.error("Silakan login terlebih dahulu");
       navigate("/login");
@@ -129,8 +137,11 @@ function ProductSection({ productData, onAddToCart }) {
       toast.error("Hanya pembeli yang dapat melakukan pembelian");
       return;
     }
-    handleAddToCart();
-    navigate("/cart");
+    // Wait for add to cart to complete before navigating
+    const success = await handleAddToCart();
+    if (success !== false) {
+      navigate("/cart");
+    }
   };
 
   const addToWishlist = async () => {

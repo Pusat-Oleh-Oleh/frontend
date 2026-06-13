@@ -196,10 +196,12 @@ const Pesanan = () => {
             {transactions.map((transaction) => (
               <tr key={transaction._id} className="border-b border-gray-200 hover:bg-gray-50">
                 <td className="p-4">{transaction._id}</td>
-                <td className="p-4">{transaction.buyer.name}</td>
+                <td className="p-4">{transaction.buyer?.name || '-'}</td>
                 <td className="p-4">
-                  {transaction.products.map((product, index) => (
-                    <div key={index}>{product.productId}</div>
+                  {(transaction.products || []).map((product, index) => (
+                    <div key={index}>
+                      {product.productName || 'Produk tidak ditemukan'} (x{product.quantity})
+                    </div>
                   ))}
                 </td>
                 <td className="p-4 text-center">

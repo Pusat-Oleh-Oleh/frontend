@@ -42,23 +42,13 @@ const DashboardBuyer = () => {
       setIsLoading(true);
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const [userResponse, paymentResponse] = await Promise.all([
-          axios.get(`${apiUrl}/user`, { headers }),
-          axios.get(`${apiUrl}/user/payment`, { headers }).catch(err => {
-            // Handle payment method error separately
-            if (err.response?.status === 404) {
-              toast.error('Anda belum memiliki metode pembayaran');
-              return { data: { paymentMethods: [] } };
-            }
-            throw err;
-          })
-        ]);
+        const userResponse = await axios.get(`${apiUrl}/user`, { headers });
         
         setDashboardData({
           userData: userResponse.data.user,
           userImage: userResponse.data.image?.[0],
           addressData: userResponse.data.address || [],
-          paymentData: paymentResponse.data.paymentMethods || []
+          paymentData: [] // not used anymore — payments handled by Midtrans
         });
         setError(null);
       } catch (error) {
@@ -80,7 +70,7 @@ const DashboardBuyer = () => {
   const navItems = [
     { path: 'profile', label: 'Biodata', icon: UserIcon },
     { path: 'address', label: 'Alamat', icon: MapPinIcon },
-    { path: 'payment', label: 'Pembayaran', icon: CreditCardIcon }
+    { path: 'payment', label: 'Metode Bayar', icon: CreditCardIcon }
   ];
 
   if (isLoading) {
