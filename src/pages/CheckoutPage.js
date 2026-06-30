@@ -11,20 +11,16 @@ const CheckoutPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, token } = useContext(AuthContext);
   const apiUrl = process.env.REACT_APP_API_BASE_URL;
+  const midtransClientKey = process.env.REACT_APP_MIDTRANS_CLIENT_KEY;
   
   // State declarations
   const [checkoutData, setCheckoutData] = useState(null);
   const [couriers, setCouriers] = useState([]);
   const [selectedCouriers, setSelectedCouriers] = useState({});
-  const [voucherCode, setVoucherCode] = useState('');
-  const [voucher, setVoucher] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [paymentMethod, setPaymentMethod] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const [orderNotes, setOrderNotes] = useState({});
   const [subTotals, setSubTotals] = useState({});
-  const [isProductsExpanded, setIsProductsExpanded] = useState(true);
-  const [paymentMethods, setPaymentMethods] = useState([]);
-  const [selectedPaymentId, setSelectedPaymentId] = useState(null);
   const [addresses, setAddresses] = useState([]);
   const [selectedAddressId, setSelectedAddressId] = useState(null);
   const [shopInsurance, setShopInsurance] = useState({});
@@ -189,6 +185,24 @@ const CheckoutPage = () => {
     { id: 'shipping', label: 'Pengiriman' }
   ];
 
+  // Load Midtrans Snap.js script
+  useEffect(() => {
+    const midtransScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    
+    // Check if already loaded
+    if (document.querySelector(`script[src="${midtransScriptUrl}"]`)) return;
+    
+    const script = document.createElement('script');
+    script.src = midtransScriptUrl;
+    script.setAttribute('data-client-key', midtransClientKey);
+    script.async = true;
+    document.head.appendChild(script);
+    
+    return () => {
+      // Cleanup on unmount (optional)
+    };
+  }, [midtransClientKey]);
+
   // Kalkulasi total dengan ongkir
   const calculateTotal = useCallback(() => {
     let total = Object.values(subTotals).reduce((a, b) => a + b, 0);
@@ -204,7 +218,7 @@ const CheckoutPage = () => {
     // Tambah asuransi
     Object.entries(shopInsurance).forEach(([shopId, isInsured]) => {
       if (isInsured) {
-        total += 800; // Biaya asuransi per toko
+        total += 800;
       }
     });
 
@@ -213,13 +227,9 @@ const CheckoutPage = () => {
 
   const filterVouchers = useCallback((vouchers) => {
     let filtered = [...vouchers];
-    
-    // Filter by tab
     if (selectedTab !== 'all') {
       filtered = filtered.filter(v => v.type === selectedTab);
     }
-    
-    // Filter by search
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(v => 
@@ -227,8 +237,6 @@ const CheckoutPage = () => {
         v.description.toLowerCase().includes(query)
       );
     }
-    
-    // Sort vouchers
     switch (sortBy) {
       case 'expiring':
         filtered.sort((a, b) => new Date(a.expiryDate) - new Date(b.expiryDate));
@@ -236,39 +244,32 @@ const CheckoutPage = () => {
       case 'highest':
         filtered.sort((a, b) => b.value - a.value);
         break;
-      default: // newest
+      default:
         filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     }
-    
     return filtered;
   }, [selectedTab, searchQuery, sortBy]);
 
   const handleApplyVoucher = (voucher) => {
     const subtotal = Object.values(subTotals).reduce((a, b) => a + b, 0);
-    
-    // Check minimum purchase
     if (subtotal < voucher.minPurchase) {
       toast.error(`Minimal pembelian Rp${voucher.minPurchase.toLocaleString()} untuk menggunakan voucher ini`);
       return;
     }
-
     if (!voucher.stackable) {
       setTempSelectedVouchers([voucher]);
       return;
     }
-
     const hasNonStackableVoucher = tempSelectedVouchers.some(v => !v.stackable);
     if (hasNonStackableVoucher) {
       toast.error('Tidak bisa menambahkan voucher karena sudah ada voucher yang tidak bisa digabungkan');
       return;
     }
-
     const hasVoucherSameType = tempSelectedVouchers.some(v => v.type === voucher.type);
     if (hasVoucherSameType) {
       toast.error('Hanya bisa memilih satu voucher untuk setiap jenisnya');
       return;
     }
-
     setTempSelectedVouchers([...tempSelectedVouchers, voucher]);
   };
 
@@ -295,14 +296,11 @@ const CheckoutPage = () => {
     return selectedVouchers.reduce((acc, voucher) => {
       let discount = 0;
       if (voucher.type === 'discount') {
-        // Diskon persentase
         discount = (voucher.value / 100) * subtotal;
-        // Terapkan batas maksimum diskon
         if (voucher.maxDiscount) {
           discount = Math.min(discount, voucher.maxDiscount);
         }
       } else if (voucher.type === 'shipping' && totalShipping > 0) {
-        // Diskon ongkir
         discount = Math.min(voucher.value, totalShipping);
       }
       return acc + discount;
@@ -314,10 +312,12 @@ const CheckoutPage = () => {
       shop => selectedCouriers[shop.shopId]
     );
 
-    if (!allShopsHaveCourier || !selectedPaymentId || !selectedAddressId) {
-      toast.error('Pilih kurir untuk setiap toko, metode pembayaran, dan alamat pengiriman');
+    if (!allShopsHaveCourier || !selectedAddressId) {
+      toast.error('Pilih kurir untuk setiap toko dan alamat pengiriman');
       return;
     }
+
+    setIsProcessing(true);
 
     try {
       const transactionData = {
@@ -330,37 +330,71 @@ const CheckoutPage = () => {
           courierId: selectedCouriers[shop.shopId],
           note: orderNotes[shop.shopId] || ''
         })),
-        paymentId: selectedPaymentId,
         voucherId: selectedVouchers.length > 0 ? selectedVouchers[0]._id : '',
         addressId: selectedAddressId
       };
 
-      // Create transaction
-      await axios.post(
+      // Create transaction and get snap token
+      const response = await axios.post(
         `${apiUrl}/transaction`,
         transactionData,
         { headers: { Authorization: `Bearer ${token}` } }
       );
 
-      // Clear cart and localStorage
-      await axios.delete(`${apiUrl}/cart/clear`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const { snapToken } = response.data;
 
-      localStorage.removeItem('checkoutItems');
-      toast.success('Transaksi berhasil dibuat');
-      navigate('/transaction');
+      if (!snapToken) {
+        toast.error('Gagal mendapatkan token pembayaran');
+        setIsProcessing(false);
+        return;
+      }
+
+      // Open Midtrans Snap popup
+      window.snap.pay(snapToken, {
+        onSuccess: async (result) => {
+          // Clear cart and localStorage
+          try {
+            await axios.delete(`${apiUrl}/cart/clear`, {
+              headers: { Authorization: `Bearer ${token}` }
+            });
+          } catch (e) {
+            console.error('Clear cart error:', e);
+          }
+          localStorage.removeItem('checkoutItems');
+          toast.success('Pembayaran berhasil!');
+          navigate('/payment/status', { state: { orderId: result.order_id, status: 'success' } });
+        },
+        onPending: (result) => {
+          localStorage.removeItem('checkoutItems');
+          toast.success('Transaksi dibuat! Silakan selesaikan pembayaran.');
+          navigate('/payment/status', { state: { orderId: result.order_id, status: 'pending' } });
+        },
+        onError: (result) => {
+          toast.error('Pembayaran gagal. Silakan coba lagi.');
+          setIsProcessing(false);
+        },
+        onClose: () => {
+          toast('Pembayaran belum selesai. Anda bisa melanjutkan dari halaman transaksi.', { icon: '⚠️' });
+          setIsProcessing(false);
+          // Clear cart since transaction is already created
+          axios.delete(`${apiUrl}/cart/clear`, {
+            headers: { Authorization: `Bearer ${token}` }
+          }).catch(() => {});
+          localStorage.removeItem('checkoutItems');
+          navigate('/transaction');
+        }
+      });
     } catch (error) {
       const errorMessage = error.response?.data?.message || 'Gagal membuat transaksi';
       toast.error(errorMessage);
       console.error('Checkout Error:', error);
+      setIsProcessing(false);
     }
   };
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Get checkout data from localStorage
         const savedData = JSON.parse(localStorage.getItem('checkoutItems'));
         if (!savedData || !savedData.shops || savedData.shops.length === 0) {
           toast.error('Tidak ada produk yang dipilih untuk checkout');
@@ -370,7 +404,6 @@ const CheckoutPage = () => {
         
         setCheckoutData(savedData);
         
-        // Initialize orderNotes and selectedCouriers for each shop
         const initialNotes = {};
         const initialCouriers = {};
         const initialInsurance = {};
@@ -383,7 +416,6 @@ const CheckoutPage = () => {
         setSelectedCouriers(initialCouriers);
         setShopInsurance(initialInsurance);
         
-        // Calculate initial totals per shop
         const totals = savedData.shops.reduce((acc, shop) => {
           const shopTotal = shop.products.reduce((sum, product) => 
             sum + (product.price * product.quantity), 0);
@@ -392,18 +424,11 @@ const CheckoutPage = () => {
         }, {});
         setSubTotals(totals);
         
-        // Fetch other necessary data
-        const [couriersResponse, paymentResponse] = await Promise.all([
-          axios.get(`${apiUrl}/courier`, {
-            headers: { Authorization: `Bearer ${token}` }
-          }),
-          axios.get(`${apiUrl}/user/payment`, {
-            headers: { Authorization: `Bearer ${token}` }
-          })
-        ]);
+        const couriersResponse = await axios.get(`${apiUrl}/courier`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
 
         setCouriers(couriersResponse.data);
-        setPaymentMethod(paymentResponse.data[0]);
         setLoading(false);
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -418,34 +443,6 @@ const CheckoutPage = () => {
   }, [isAuthenticated, navigate, token, apiUrl]);
 
   useEffect(() => {
-    const fetchPaymentMethods = async () => {
-      try {
-        const response = await axios.get(`${apiUrl}/user/payment`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        // Mengakses array paymentMethods dari response
-        const methods = response.data.paymentMethods;
-        if (methods && Array.isArray(methods)) {
-          setPaymentMethods(methods);
-          // Set first payment method as default if available
-          if (methods.length > 0) {
-            setSelectedPaymentId(methods[0]._id);
-            setPaymentMethod(methods[0]);
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching payment methods:', error);
-        toast.error('Gagal memuat metode pembayaran');
-      }
-    };
-
-    if (isAuthenticated) {
-      fetchPaymentMethods();
-    }
-  }, [isAuthenticated, token, apiUrl]);
-
-  useEffect(() => {
     const fetchAddresses = async () => {
       try {
         const response = await axios.get(`${apiUrl}/user/address`, {
@@ -454,7 +451,6 @@ const CheckoutPage = () => {
         
         if (response.data.address && Array.isArray(response.data.address)) {
           setAddresses(response.data.address);
-          // Set first address as default if available
           if (response.data.address.length > 0) {
             setSelectedAddressId(response.data.address[0]._id);
           }
@@ -479,32 +475,11 @@ const CheckoutPage = () => {
       const courier = couriers.find(c => c._id === courierId);
       return total + (courier ? courier.cost : 0);
     }, 0);
-
-    // Check minimum purchase
-    if (subtotal < voucher.minPurchase) {
-      return false;
-    }
-
-    // Check if shipping voucher is applicable
-    if (voucher.type === 'shipping' && totalShipping === 0) {
-      return false;
-    }
-
-    // Check expiry date
-    if (new Date(voucher.expiryDate) < new Date()) {
-      return false;
-    }
-
-    // Check if non-stackable voucher can be used
-    if (!voucher.stackable && tempSelectedVouchers.some(v => v.id !== voucher.id)) {
-      return false;
-    }
-
-    // Check if same type voucher already selected
-    if (tempSelectedVouchers.some(v => v.type === voucher.type && v.id !== voucher.id)) {
-      return false;
-    }
-
+    if (subtotal < voucher.minPurchase) return false;
+    if (voucher.type === 'shipping' && totalShipping === 0) return false;
+    if (new Date(voucher.expiryDate) < new Date()) return false;
+    if (!voucher.stackable && tempSelectedVouchers.some(v => v.id !== voucher.id)) return false;
+    if (tempSelectedVouchers.some(v => v.type === voucher.type && v.id !== voucher.id)) return false;
     return true;
   }, [subTotals, selectedCouriers, couriers, tempSelectedVouchers]);
 
@@ -514,32 +489,11 @@ const CheckoutPage = () => {
       const courier = couriers.find(c => c._id === courierId);
       return total + (courier ? courier.cost : 0);
     }, 0);
-
-    // Check minimum purchase
-    if (subtotal < voucher.minPurchase) {
-      return `Minimal pembelian Rp${voucher.minPurchase.toLocaleString()}`;
-    }
-
-    // Check if shipping voucher is applicable
-    if (voucher.type === 'shipping' && totalShipping === 0) {
-      return 'Tidak ada ongkos kirim';
-    }
-
-    // Check expiry date
-    if (new Date(voucher.expiryDate) < new Date()) {
-      return `Voucher sudah kadaluarsa (berakhir ${new Date(voucher.expiryDate).toLocaleDateString()})`;
-    }
-
-    // Check if non-stackable voucher can be used
-    if (!voucher.stackable && tempSelectedVouchers.some(v => v.id !== voucher.id)) {
-      return 'Tidak bisa digabungkan dengan voucher lain';
-    }
-
-    // Check if same type voucher already selected
-    if (tempSelectedVouchers.some(v => v.type === voucher.type && v.id !== voucher.id)) {
-      return 'Sudah ada voucher jenis ini yang dipilih';
-    }
-
+    if (subtotal < voucher.minPurchase) return `Minimal pembelian Rp${voucher.minPurchase.toLocaleString()}`;
+    if (voucher.type === 'shipping' && totalShipping === 0) return 'Tidak ada ongkos kirim';
+    if (new Date(voucher.expiryDate) < new Date()) return `Voucher sudah kadaluarsa (berakhir ${new Date(voucher.expiryDate).toLocaleDateString()})`;
+    if (!voucher.stackable && tempSelectedVouchers.some(v => v.id !== voucher.id)) return 'Tidak bisa digabungkan dengan voucher lain';
+    if (tempSelectedVouchers.some(v => v.type === voucher.type && v.id !== voucher.id)) return 'Sudah ada voucher jenis ini yang dipilih';
     return '';
   }, [subTotals, selectedCouriers, couriers, tempSelectedVouchers]);
 
@@ -552,7 +506,7 @@ const CheckoutPage = () => {
             Checkout
           </span>
           <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-700 mb-2">Checkout Pesanan</h1>
-          <p className="text-xl text-gray-600 leading-relaxed">Lengkapi informasi pengiriman dan pembayaran untuk menyelesaikan pesanan Anda.</p>
+          <p className="text-xl text-gray-600 leading-relaxed">Lengkapi informasi pengiriman untuk menyelesaikan pesanan Anda.</p>
         </div>
         {loading ? (
           <div className="flex justify-center items-center min-h-[400px]">
@@ -696,7 +650,7 @@ const CheckoutPage = () => {
                               <option value="">Pilih Kurir</option>
                               {couriers.map((courier) => (
                                 <option key={courier._id} value={courier._id}>
-                                  {courier.name} - <span className="text-[#4F46E5]">Rp{courier.cost.toLocaleString()}</span>
+                                  {courier.name} - Rp{courier.cost.toLocaleString()}
                                 </option>
                               ))}
                             </select>
@@ -871,42 +825,29 @@ const CheckoutPage = () => {
                   )}
                 </div>
 
-                {/* Metode Pembayaran */}
+                {/* Metode Pembayaran - Midtrans */}
                 <div className="mb-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-medium text-gray-900">Metode Pembayaran</h3>
-                    {selectedPaymentId && (
-                      <button 
-                        onClick={() => setSelectedPaymentId(null)}
-                        className="text-sm text-[#4F46E5] hover:text-[#4338CA]"
-                      >
-                        Ganti
-                      </button>
-                    )}
-                  </div>
-                  
-                  {!selectedPaymentId ? (
-                    <div className="space-y-2">
-                      {paymentMethods.map((method) => (
-                        <button
-                          key={method._id}
-                          onClick={() => setSelectedPaymentId(method._id)}
-                          className="w-full flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:border-[#4F46E5]/50 transition-colors duration-200"
-                        >
-                          <span className="text-gray-900">{method.name}</span>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 15a2 2 0 012-2 2 2 0 012 2zm4-1a2 2 0 00-2-2 2 2 0 00-2 2zm0 0a2 2 0 012 2v4a2 2 0 01-2 2H9a2 2 0 01-2-2v-4a2 2 0 012-2 2 2 0 012 2z" clipRule="evenodd" />
-                          </svg>
-                        </button>
+                  <h3 className="font-medium text-gray-900 mb-4">Metode Pembayaran</h3>
+                  <div className="p-4 border border-[#4F46E5]/20 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-lg bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Midtrans Secure Payment</p>
+                        <p className="text-sm text-gray-600">Bank Transfer, E-Wallet, QRIS, Kartu Kredit</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-3">
+                      {['BCA', 'BNI', 'BRI', 'Mandiri', 'GoPay', 'ShopeePay', 'QRIS'].map((method) => (
+                        <span key={method} className="px-2 py-1 text-xs font-medium bg-white text-gray-600 rounded border border-gray-200">
+                          {method}
+                        </span>
                       ))}
                     </div>
-                  ) : (
-                    <div className="p-3 border border-[#4F46E5]/20 rounded-lg bg-gradient-to-r from-indigo-50 to-purple-50">
-                      <span className="text-gray-900 font-medium">
-                        {paymentMethods.find(m => m._id === selectedPaymentId)?.name}
-                      </span>
-                    </div>
-                  )}
+                  </div>
                 </div>
 
                 {/* Grand Total */}
@@ -930,20 +871,20 @@ const CheckoutPage = () => {
                 {/* Checkout Button */}
                 <button
                   onClick={handleCheckout}
-                  disabled={!selectedAddressId || !selectedPaymentId || Object.keys(selectedCouriers).length !== checkoutData?.shops.length}
+                  disabled={!selectedAddressId || !checkoutData?.shops.every(shop => selectedCouriers[shop.shopId]) || isProcessing}
                   className={`w-full py-3 px-4 rounded-lg font-medium text-white text-center transition-all duration-300
-                    ${!selectedAddressId || !selectedPaymentId || Object.keys(selectedCouriers).length !== checkoutData?.shops.length
+                    ${!selectedAddressId || !checkoutData?.shops.every(shop => selectedCouriers[shop.shopId]) || isProcessing
                       ? 'bg-gray-300 cursor-not-allowed'
                       : 'bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] hover:shadow-lg hover:shadow-indigo-500/30'
                     }`}
                 >
-                  {!selectedAddressId 
+                  {isProcessing
+                    ? 'Memproses...'
+                    : !selectedAddressId 
                     ? 'Pilih alamat pengiriman'
-                    : !selectedPaymentId
-                    ? 'Pilih metode pembayaran'
-                    : Object.keys(selectedCouriers).length !== checkoutData?.shops.length
+                    : !checkoutData?.shops.every(shop => selectedCouriers[shop.shopId])
                       ? 'Pilih kurir untuk semua toko'
-                      : 'Pesan Sekarang'}
+                      : 'Bayar Sekarang'}
                 </button>
               </div>
             </div>

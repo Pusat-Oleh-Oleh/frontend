@@ -19,6 +19,15 @@ import WishlistPage from "./pages/wishlist";
 import ProtectedRoute from "./components/protectedroute";
 import ArticleDetail from './pages/articledetail';
 import AllProducts from './pages/AllProducts';
+import PaymentStatus from './pages/PaymentStatus';
+import MessagesPage from './pages/MessagesPage';
+import NotificationsPage from './pages/NotificationsPage';
+import OlehOlehPage from './pages/OlehOlehPage';
+import KerajinanPage from './pages/KerajinanPage';
+import AboutPage from './pages/AboutPage';
+import FAQPage from './pages/FAQPage';
+import PaymentInfoPage from './pages/PaymentInfoPage';
+import ShippingInfoPage from './pages/ShippingInfoPage';
 
 function App() {
   return (
@@ -35,6 +44,12 @@ function App() {
           <Route path="/product/:productId" element={<ProductDetail />} />
           <Route path="/articlehomepage" element={<ArticlePage />} />
           <Route path="/articleview/:articleId" element={<ArticleDetail />} />
+          <Route path="/oleh-oleh" element={<OlehOlehPage />} />
+          <Route path="/kerajinan" element={<KerajinanPage />} />
+          <Route path="/about" element={<AboutPage />} />
+          <Route path="/faq" element={<FAQPage />} />
+          <Route path="/payment-info" element={<PaymentInfoPage />} />
+          <Route path="/shipping-info" element={<ShippingInfoPage />} />
           {/* Protected All Products (Login Required) */}
           <Route element={<ProtectedRoute allowedRoles={["buyer", "seller"]} />}>
              <Route path="/all-products" element={<AllProducts />} />
@@ -52,7 +67,10 @@ function App() {
             <Route path="/cart" element={<CartPage />} />
             <Route path="/checkout" element={<CheckoutPage />} />
             <Route path="/transaction" element={<Transaction />} />
+            <Route path="/payment/status" element={<PaymentStatus />} />
             <Route path="/wishlist" element={<WishlistPage />} />
+            <Route path="/messages" element={<MessagesPage />} />
+            <Route path="/notifications" element={<NotificationsPage />} />
           </Route>
         </Routes>
         <Toaster position="top-right" reverseOrder={false} />

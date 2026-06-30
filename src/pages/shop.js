@@ -77,6 +77,13 @@ const Shop = () => {
 
           if (shop._id) {
             fetchProductsByShopId(shop._id);
+
+            // ✅ Increment visitor — sekali per sesi per toko
+            const visitKey = `visited_${shop._id}`;
+            if (!sessionStorage.getItem(visitKey)) {
+              sessionStorage.setItem(visitKey, '1');
+              axios.post(`${apiUrl}/shop/${shop._id}/visit`).catch(() => {});
+            }
           }
         } else {
           setShopData(null);
@@ -90,6 +97,7 @@ const Shop = () => {
 
     fetchShopData();
   }, [normalizeUrl, apiUrl, shopName, fetchProductsByShopId]);
+
 
   useEffect(() => {
     const fetchCategories = async () => {

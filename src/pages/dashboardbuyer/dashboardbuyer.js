@@ -17,7 +17,6 @@ const DashboardBuyer = () => {
     userData: null,
     userImage: null,
     addressData: [],
-    paymentData: []
   });
   
   const { token, user, isAuthenticated } = useContext(AuthContext);
@@ -42,31 +41,17 @@ const DashboardBuyer = () => {
       setIsLoading(true);
       try {
         const headers = { Authorization: `Bearer ${token}` };
-        const [userResponse, paymentResponse] = await Promise.all([
-          axios.get(`${apiUrl}/user`, { headers }),
-          axios.get(`${apiUrl}/user/payment`, { headers }).catch(err => {
-            // Handle payment method error separately
-            if (err.response?.status === 404) {
-              toast.error('Anda belum memiliki metode pembayaran');
-              return { data: { paymentMethods: [] } };
-            }
-            throw err;
-          })
-        ]);
-        
+        const userResponse = await axios.get(`${apiUrl}/user`, { headers });
         setDashboardData({
           userData: userResponse.data.user,
           userImage: userResponse.data.image?.[0],
           addressData: userResponse.data.address || [],
-          paymentData: paymentResponse.data.paymentMethods || []
         });
         setError(null);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-        if (error.response?.status !== 404) {
-          setError('Terjadi kesalahan saat mengambil data');
-          toast.error('Gagal memuat data dashboard');
-        }
+        setError('Terjadi kesalahan saat mengambil data');
+        toast.error('Gagal memuat data dashboard');
       } finally {
         setIsLoading(false);
       }
@@ -190,12 +175,7 @@ const DashboardBuyer = () => {
               />
               <Route 
                 path="payment" 
-                element={
-                  <Payment 
-                    paymentData={dashboardData.paymentData}
-                    setDashboardData={setDashboardData}
-                  />
-                } 
+                element={<Payment />} 
               />
               <Route path="/" element={<Navigate to="profile" replace />} />
             </Routes>
