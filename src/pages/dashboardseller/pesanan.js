@@ -279,6 +279,7 @@ const Pesanan = () => {
           </div>
         </div>
 
+<<<<<<< HEAD
         {/* Result count */}
         {!loading && (
           <div className="px-5 py-2.5 bg-gray-50/60 border-b border-gray-100 flex items-center justify-between">
@@ -315,6 +316,65 @@ const Pesanan = () => {
                 <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Tanggal</th>
                 <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Status</th>
                 <th className="px-4 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wide">Aksi</th>
+=======
+        <table className="w-full border-t border-gray-200">
+          <thead>
+            <tr className="border-b border-gray-200">
+              <th className="text-left p-4">Nomor Pesanan</th>
+              <th className="text-left p-4">Nama Pembeli</th>
+              <th className="text-left p-4">Produk</th>
+              <th className="text-center p-4">Total Harga</th>
+              <th className="text-center p-4">Tanggal Pesanan</th>
+              <th className="text-center p-4">Status Pesanan</th>
+              <th className="text-center p-4">Aksi</th>
+            </tr>
+          </thead>
+          <tbody>
+            {transactions.map((transaction) => (
+              <tr key={transaction._id} className="border-b border-gray-200 hover:bg-gray-50">
+                <td className="p-4">{transaction._id}</td>
+                <td className="p-4">{transaction.buyer?.name || '-'}</td>
+                <td className="p-4">
+                  {(transaction.products || []).map((product, index) => (
+                    <div key={index}>
+                      {product.productName || 'Produk tidak ditemukan'} (x{product.quantity})
+                    </div>
+                  ))}
+                </td>
+                <td className="p-4 text-center">
+                  Rp {transaction.totalPrice?.toLocaleString('id-ID')}
+                </td>
+                <td className="p-4 text-center">
+                  {new Date(transaction.createdAt).toLocaleDateString('id-ID')}
+                </td>
+                <td className="p-4 text-center">
+                  <span className={`px-3 py-1 rounded-full text-sm ${
+                    transaction.status === 'Completed' ? 'bg-green-100 text-green-800' :
+                    transaction.status === 'Paid' ? 'bg-blue-100 text-blue-800' :
+                    transaction.status === 'Processed' ? 'bg-yellow-100 text-yellow-800' :
+                    transaction.status === 'Cancelled' ? 'bg-red-100 text-red-800' :
+                    'bg-gray-100 text-gray-800'
+                  }`}>
+                    {transaction.status}
+                  </span>
+                </td>
+                <td className="p-4 text-center">
+                  {transaction.status === 'Paid' && (
+                    <button
+                      onClick={() => handleProcessTransaction(transaction._id)}
+                      className="bg-blue-500 text-white px-3 py-1 rounded mr-2 text-sm"
+                    >
+                      Process
+                    </button>
+                  )}
+                  <button className="mr-2" title="Lihat Detail">
+                    <EyeIcon className="w-5 h-5 text-gray-500" />
+                  </button>
+                  <button title="Cetak Invoice">
+                    <PrinterIcon className="w-5 h-5 text-gray-500" />
+                  </button>
+                </td>
+>>>>>>> b1936b535c89d893021343af947447e04593f2bc
               </tr>
             </thead>
             <tbody>

@@ -42,10 +42,18 @@ const DashboardBuyer = () => {
       try {
         const headers = { Authorization: `Bearer ${token}` };
         const userResponse = await axios.get(`${apiUrl}/user`, { headers });
+<<<<<<< HEAD
+=======
+        
+>>>>>>> b1936b535c89d893021343af947447e04593f2bc
         setDashboardData({
           userData: userResponse.data.user,
           userImage: userResponse.data.image?.[0],
           addressData: userResponse.data.address || [],
+<<<<<<< HEAD
+=======
+          paymentData: [] // not used anymore — payments handled by Midtrans
+>>>>>>> b1936b535c89d893021343af947447e04593f2bc
         });
         setError(null);
       } catch (error) {
@@ -65,7 +73,7 @@ const DashboardBuyer = () => {
   const navItems = [
     { path: 'profile', label: 'Biodata', icon: UserIcon },
     { path: 'address', label: 'Alamat', icon: MapPinIcon },
-    { path: 'payment', label: 'Pembayaran', icon: CreditCardIcon }
+    { path: 'payment', label: 'Metode Bayar', icon: CreditCardIcon }
   ];
 
   if (isLoading) {

@@ -44,11 +44,14 @@ const LandingPage = () => {
   };
 
   const handleClosePopup = () => {
+    localStorage.setItem('profile_popup_dismissed', 'true');
     setShowPopup(false);
   };
 
   const isProfileIncomplete = !addressData || !userData?.profileImage;
-  const shouldShowPopup = initialLoadComplete && isProfileIncomplete && isAuthenticated && token && showPopup;
+  // Cek apakah user sudah pernah skip/close popup ini
+  const hasSeenPopup = localStorage.getItem('profile_popup_dismissed') === 'true';
+  const shouldShowPopup = initialLoadComplete && isProfileIncomplete && isAuthenticated && token && showPopup && !hasSeenPopup;
 
   return (
     <>

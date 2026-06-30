@@ -93,7 +93,19 @@ const ProfilePopup = ({ onUpdateAddress, onClose }) => {
 
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center z-50">
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md mx-4">
+      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md mx-4 relative">
+        {/* Tombol tutup (X) di pojok kanan atas */}
+        {step !== 4 && (
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
+            title="Lewati"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        )}
         {step === 1 && (
           <>
             <h2 className="text-3xl font-bold mb-4 text-center bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-transparent bg-clip-text">
@@ -107,6 +119,12 @@ const ProfilePopup = ({ onUpdateAddress, onClose }) => {
               className="w-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white px-6 py-3 rounded-xl font-medium hover:from-[#4338CA] hover:to-[#6D28D9] transition-all duration-300 shadow-lg hover:shadow-indigo-500/30"
             >
               Mulai
+            </button>
+            <button
+              onClick={onClose}
+              className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors py-2"
+            >
+              Lewati untuk sekarang
             </button>
           </>
         )}
@@ -159,6 +177,12 @@ const ProfilePopup = ({ onUpdateAddress, onClose }) => {
             >
               Lanjutkan
             </button>
+            <button
+              onClick={handleNext}
+              className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors py-2"
+            >
+              Lewati, tidak sekarang
+            </button>
           </>
         )}
 
@@ -191,6 +215,13 @@ const ProfilePopup = ({ onUpdateAddress, onClose }) => {
               className="w-full mt-6 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white px-6 py-3 rounded-xl font-medium hover:from-[#4338CA] hover:to-[#6D28D9] transition-all duration-300 shadow-lg hover:shadow-indigo-500/30"
             >
               Simpan Alamat
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-full mt-3 text-gray-500 hover:text-gray-700 text-sm font-medium transition-colors py-2"
+            >
+              Lewati untuk sekarang
             </button>
           </form>
         )}

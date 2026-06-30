@@ -20,6 +20,7 @@ import ProtectedRoute from "./components/protectedroute";
 import ArticleDetail from './pages/articledetail';
 import AllProducts from './pages/AllProducts';
 import PaymentStatus from './pages/PaymentStatus';
+<<<<<<< HEAD
 import MessagesPage from './pages/MessagesPage';
 import NotificationsPage from './pages/NotificationsPage';
 import OlehOlehPage from './pages/OlehOlehPage';
@@ -28,6 +29,8 @@ import AboutPage from './pages/AboutPage';
 import FAQPage from './pages/FAQPage';
 import PaymentInfoPage from './pages/PaymentInfoPage';
 import ShippingInfoPage from './pages/ShippingInfoPage';
+=======
+>>>>>>> b1936b535c89d893021343af947447e04593f2bc
 
 function App() {
   return (
