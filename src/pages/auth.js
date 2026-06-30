@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import Modal from "react-modal";
 import { AuthContext } from "../components/context/AuthContext";
+import { GoogleLogin } from "@react-oauth/google";
+import toast from "react-hot-toast";
 
 Modal.setAppElement("#root");
 
@@ -14,6 +16,7 @@ function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
   const apiUrl = process.env.REACT_APP_API_BASE_URL;
 
   const openModal = () => setModalIsOpen(true);
@@ -40,6 +43,8 @@ function AuthPage() {
       const decodedToken = JSON.parse(atob(token.split(".")[1]));
       const role = decodedToken.role;
 
+      toast.success("Login berhasil!");
+
       if (role === "buyer") {
         navigate("/"); // Redirect ke halaman pembeli
       } else if (role === "seller") {
@@ -49,6 +54,49 @@ function AuthPage() {
       console.error("Login error:", error);
       setError("Login gagal. Silakan cek kembali email dan password Anda.");
     }
+  };
+
+  // Handle Google Login
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setGoogleLoading(true);
+    setError("");
+
+    try {
+      const response = await axios.post(`${apiUrl}/auth/google/login`, {
+        credential: credentialResponse.credential,
+      });
+
+      const { token } = response.data;
+
+      // Gunakan fungsi login dari AuthContext
+      login(token);
+
+      // Redirect berdasarkan role
+      const decodedToken = JSON.parse(atob(token.split(".")[1]));
+      const role = decodedToken.role;
+
+      toast.success("Login dengan Google berhasil!");
+
+      if (role === "buyer") {
+        navigate("/");
+      } else if (role === "seller") {
+        navigate("/dashboard-seller");
+      } else {
+        navigate("/");
+      }
+    } catch (err) {
+      console.error("Google login error:", err);
+      const message = err.response?.data?.message || "Login dengan Google gagal. Coba lagi.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("Login dengan Google gagal. Coba lagi.");
+    toast.error("Login dengan Google gagal.");
   };
 
   const handleSubmit = () => {
@@ -123,6 +171,40 @@ function AuthPage() {
             </button>
           </form>
 
+          {/* Divider */}
+          <div className="mt-5 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white/80 text-gray-500">atau</span>
+            </div>
+          </div>
+
+          {/* Google Login Button */}
+          <div className="mt-5 flex justify-center">
+            {googleLoading ? (
+              <div className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-500 bg-gray-50">
+                <svg className="animate-spin h-5 w-5 mr-2 text-[#4F46E5]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Memproses...
+              </div>
+            ) : (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="outline"
+                size="large"
+                width="100%"
+                text="signin_with"
+                shape="rectangular"
+                logo_alignment="left"
+              />
+            )}
+          </div>
+
           <footer className="mt-8 text-center text-xs text-gray-500">
             <p> 2024 PusatOlehOleh. All Rights Reserved</p>
           </footer>
@@ -150,7 +232,7 @@ function AuthPage() {
                 : "bg-white/80 border-2 border-gray-200 text-gray-600 hover:border-gray-300 hover:bg-gray-50"
             }`}
           >
-            User
+            Buyer
           </button>
           <button
             onClick={() => setSelectedRole("seller")}

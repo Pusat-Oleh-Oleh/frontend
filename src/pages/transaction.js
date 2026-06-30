@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useContext } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import { toast } from 'react-hot-toast';
 import Header from '../components/section/header';
 import { AuthContext } from '../components/context/AuthContext';
 
@@ -11,7 +12,19 @@ function Transaction() {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
   const $apiUrl = process.env.REACT_APP_API_BASE_URL;
+  const midtransClientKey = process.env.REACT_APP_MIDTRANS_CLIENT_KEY;
   const { isAuthenticated, token, isLoading: authLoading } = useContext(AuthContext);
+
+  // Load Midtrans Snap.js
+  useEffect(() => {
+    const midtransScriptUrl = 'https://app.sandbox.midtrans.com/snap/snap.js';
+    if (document.querySelector(`script[src="${midtransScriptUrl}"]`)) return;
+    const script = document.createElement('script');
+    script.src = midtransScriptUrl;
+    script.setAttribute('data-client-key', midtransClientKey);
+    script.async = true;
+    document.head.appendChild(script);
+  }, [midtransClientKey]);
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
@@ -46,21 +59,36 @@ function Transaction() {
     fetchTransactions();
   }, [fetchTransactions]);
 
-  const handlePayTransaction = async (transactionId, paymentId) => {
-    try {
-      await axios.put(
-        `${$apiUrl}/transaction/${transactionId}/pay/${paymentId}`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`
-          }
-        }
-      );
-      fetchTransactions();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error processing payment');
+  const handlePayWithMidtrans = (transaction) => {
+    const snapToken = transaction.snapToken;
+    if (!snapToken) {
+      toast.error('Token pembayaran tidak ditemukan. Silakan buat transaksi baru.');
+      return;
     }
+
+    if (!window.snap) {
+      toast.error('Midtrans belum siap. Silakan muat ulang halaman.');
+      return;
+    }
+
+    window.snap.pay(snapToken, {
+      onSuccess: (result) => {
+        toast.success('Pembayaran berhasil!');
+        navigate('/payment/status', { state: { orderId: result.order_id, status: 'success' } });
+      },
+      onPending: (result) => {
+        toast.success('Silakan selesaikan pembayaran.');
+        navigate('/payment/status', { state: { orderId: result.order_id, status: 'pending' } });
+      },
+      onError: (result) => {
+        toast.error('Pembayaran gagal.');
+        fetchTransactions();
+      },
+      onClose: () => {
+        toast('Popup pembayaran ditutup.', { icon: '⚠️' });
+        fetchTransactions();
+      }
+    });
   };
 
   const handleCompleteTransaction = async (transactionId) => {
@@ -90,6 +118,10 @@ function Transaction() {
         return 'bg-yellow-100 text-yellow-800';
       case 'Completed':
         return 'bg-green-100 text-green-800';
+      case 'Cancelled':
+        return 'bg-gray-100 text-gray-800';
+      case 'Expired':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -127,16 +159,21 @@ function Transaction() {
                         <span className={`px-4 py-1.5 rounded-full text-sm font-medium ${getStatusColor(status)}`}>
                           {status}
                         </span>
+                        {transaction.paymentType && (
+                          <span className="px-3 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-700 capitalize">
+                            {transaction.paymentType.replace(/_/g, ' ')}
+                          </span>
+                        )}
                         <p className="text-sm text-gray-500">
                           {new Date(transaction.createdAt).toLocaleString()}
                         </p>
                       </div>
-                      <p className="font-medium text-gray-900">ID: {transaction._id}</p>
+                      <p className="font-medium text-gray-900">ID: {transaction.midtransOrderId || transaction._id}</p>
                     </div>
                     <div className="flex flex-col space-y-3">
                       {status === 'Not Paid' && (
                         <button
-                          onClick={() => handlePayTransaction(transaction._id, transaction.paymentId._id)}
+                          onClick={() => handlePayWithMidtrans(transaction)}
                           className="inline-flex items-center px-6 py-2.5 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white font-medium rounded-lg hover:shadow-lg hover:shadow-indigo-500/30 transition-all duration-300"
                         >
                           <span>Bayar Sekarang</span>
@@ -164,28 +201,34 @@ function Transaction() {
                           Transaksi Selesai
                         </span>
                       )}
+                      {(status === 'Cancelled' || status === 'Expired') && (
+                        <span className="inline-flex items-center text-gray-500 font-medium">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                          </svg>
+                          {status === 'Cancelled' ? 'Dibatalkan' : 'Kedaluwarsa'}
+                        </span>
+                      )}
                     </div>
                   </div>
                   
                   <div className="mt-6 pt-6 border-t border-gray-100">
-                    <div className="grid grid-cols-3 gap-8">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-gray-500">Metode Pembayaran</p>
-                        <p className="text-base font-semibold text-gray-900">{transaction.paymentId.name}</p>
-                      </div>
+                    <div className="grid grid-cols-2 gap-8">
                       <div className="space-y-2">
                         <p className="text-sm font-medium text-gray-500">Kurir</p>
                         <p className="text-base font-semibold text-gray-900">
-                          {transaction.courierId.name}
-                          <span className="text-sm font-normal text-gray-500 ml-2">
-                            (Rp {transaction.courierId.cost.toLocaleString()})
-                          </span>
+                          {transaction.courierId?.name || '-'}
+                          {transaction.courierId?.cost && (
+                            <span className="text-sm font-normal text-gray-500 ml-2">
+                              (Rp {transaction.courierId.cost.toLocaleString()})
+                            </span>
+                          )}
                         </p>
                       </div>
                       <div className="space-y-2 text-right">
                         <p className="text-sm font-medium text-gray-500">Total Pembayaran</p>
                         <p className="text-lg font-bold text-[#4F46E5]">
-                          Rp {transaction.totalPrice.toLocaleString()}
+                          Rp {transaction.totalPrice?.toLocaleString()}
                         </p>
                       </div>
                     </div>

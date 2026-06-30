@@ -1,338 +1,219 @@
-import React, { useState } from 'react';
-import axios from 'axios';
-import { useContext } from 'react';
-import { AuthContext } from '../../components/context/AuthContext';
-import { toast } from 'react-hot-toast';
+import React from 'react';
+import { Link } from 'react-router-dom';
+import {
+  CreditCardIcon,
+  BuildingLibraryIcon,
+  DevicePhoneMobileIcon,
+  BanknotesIcon,
+  ShieldCheckIcon,
+  LockClosedIcon,
+  CheckCircleIcon,
+  ArrowRightIcon,
+  GlobeAltIcon,
+  ShoppingCartIcon,
+  MapPinIcon,
+  CheckBadgeIcon,
+} from '@heroicons/react/24/outline';
+import {
+  CreditCardIcon as CreditCardSolid,
+  BuildingLibraryIcon as BankSolid,
+  DevicePhoneMobileIcon as PhoneSolid,
+  BanknotesIcon as CashSolid,
+} from '@heroicons/react/24/solid';
 
-const BalanceAndTopUp = ({ 
-  paymentData, 
-  selectedPayment, 
-  setSelectedPayment, 
-  amount, 
-  setAmount, 
-  handleAddCredit,
-  formatCurrency,
-  isLoading 
-}) => (
-  <div className="space-y-8">
-    {/* Payment Methods List */}
-    <div>
-      <div className="flex items-center mb-6">
-        <div className="w-1 h-6 bg-gradient-to-b from-[#4F46E5] to-[#7C3AED] rounded mr-3"></div>
-        <h3 className="text-2xl font-bold text-gray-900">Saldo Tersedia</h3>
+const paymentGroups = [
+  {
+    category: 'Transfer Bank — Virtual Account',
+    icon: BuildingLibraryIcon,
+    solidIcon: BankSolid,
+    color: 'from-blue-500 to-indigo-600',
+    bgLight: 'bg-blue-50',
+    textColor: 'text-blue-600',
+    desc: 'Bayar melalui ATM, mobile banking, atau internet banking.',
+    methods: [
+      { name: 'BCA', desc: 'BCA Virtual Account' },
+      { name: 'BNI', desc: 'BNI Virtual Account' },
+      { name: 'BRI', desc: 'BRI Virtual Account' },
+      { name: 'Mandiri', desc: 'Mandiri Bill Payment' },
+      { name: 'Permata', desc: 'Permata Virtual Account' },
+    ],
+  },
+  {
+    category: 'Dompet Digital (E-Wallet)',
+    icon: DevicePhoneMobileIcon,
+    solidIcon: PhoneSolid,
+    color: 'from-emerald-500 to-green-600',
+    bgLight: 'bg-emerald-50',
+    textColor: 'text-emerald-600',
+    desc: 'Bayar cepat dengan dompet digital favorit Anda.',
+    methods: [
+      { name: 'GoPay',      desc: 'Scan QR atau via aplikasi Gojek' },
+      { name: 'ShopeePay', desc: 'Scan QR atau via aplikasi Shopee' },
+      { name: 'OVO',       desc: 'Bayar langsung dari saldo OVO' },
+      { name: 'DANA',      desc: 'Bayar dengan aplikasi DANA' },
+      { name: 'QRIS',      desc: 'Scan QR universal semua e-wallet' },
+    ],
+  },
+  {
+    category: 'Kartu Kredit / Debit',
+    icon: CreditCardIcon,
+    solidIcon: CreditCardSolid,
+    color: 'from-violet-500 to-purple-600',
+    bgLight: 'bg-violet-50',
+    textColor: 'text-violet-600',
+    desc: 'Bayar menggunakan kartu kredit atau debit Visa / Mastercard.',
+    methods: [
+      { name: 'Visa', desc: 'Kredit & Debit' },
+      { name: 'Mastercard', desc: 'Kredit & Debit' },
+      { name: 'JCB', desc: 'Kredit & Debit' },
+    ],
+  },
+  {
+    category: 'Minimarket',
+    icon: BanknotesIcon,
+    solidIcon: CashSolid,
+    color: 'from-orange-500 to-amber-600',
+    bgLight: 'bg-orange-50',
+    textColor: 'text-orange-600',
+    desc: 'Bayar tunai di kasir minimarket terdekat menggunakan kode pembayaran.',
+    methods: [
+      { name: 'Indomaret', desc: 'Bayar tunai di kasir Indomaret' },
+      { name: 'Alfamart',  desc: 'Bayar tunai di kasir Alfamart' },
+    ],
+  },
+];
+
+const steps = [
+  { icon: ShoppingCartIcon, label: 'Pilih Produk', desc: 'Tambahkan produk ke keranjang belanja' },
+  { icon: MapPinIcon,      label: 'Checkout',     desc: 'Isi alamat & pilih kurir pengiriman' },
+  { icon: CreditCardIcon,  label: 'Pilih Bayar',  desc: 'Pilih metode pembayaran di halaman Snap' },
+  { icon: CheckBadgeIcon,  label: 'Selesai',      desc: 'Status pesanan diperbarui otomatis' },
+];
+
+const securityBadges = [
+  { icon: LockClosedIcon,  title: 'SSL 256-bit',          desc: 'Enkripsi end-to-end' },
+  { icon: ShieldCheckIcon, title: 'PCI-DSS Level 1',      desc: 'Standar keamanan tertinggi' },
+  { icon: GlobeAltIcon,    title: 'Diawasi Bank Indonesia', desc: 'Diregulasi Bank Indonesia' },
+];
+
+const Payment = () => {
+  return (
+    <div className="max-w-3xl mx-auto space-y-8">
+
+      {/* ── Header ── */}
+      <div className="text-center">
+        <div className="inline-flex items-center justify-center w-14 h-14 bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] rounded-2xl mb-3 shadow-lg shadow-indigo-500/30">
+          <CreditCardIcon className="w-7 h-7 text-white" />
+        </div>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">Metode Pembayaran</h2>
+        <p className="text-sm text-gray-500 max-w-sm mx-auto">
+          Kami mendukung berbagai metode pembayaran aman melalui{' '}
+          <span className="font-semibold text-[#4F46E5]">Midtrans</span> Payment Gateway.
+        </p>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {paymentData.length === 0 ? (
-          <div className="col-span-2 bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-8 text-center">
-            <div className="w-16 h-16 mx-auto bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] rounded-full flex items-center justify-center mb-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-              </svg>
-            </div>
-            <p className="text-lg text-gray-600 mb-2">Belum ada metode pembayaran</p>
-            <p className="text-sm text-gray-500">Tambahkan metode pembayaran untuk mulai bertransaksi</p>
-          </div>
-        ) : (
-          paymentData.map((payment) => (
-            <div
-              key={payment._id}
-              className={`bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-6 group hover:-translate-y-1 transition-all duration-300 ${
-                selectedPayment === payment._id ? 'ring-2 ring-[#4F46E5]' : ''
-              }`}
-              onClick={() => setSelectedPayment(payment._id)}
-              role="button"
-              tabIndex={0}
-            >
-              <div className="flex flex-col">
-                <span className="text-sm text-gray-600 mb-1">Metode Pembayaran</span>
-                <span className="text-xl font-medium text-gray-900 mb-4">{payment.name}</span>
-                <span className="text-sm text-gray-600 mb-1">Saldo</span>
-                <span className="text-2xl font-bold text-[#4F46E5]">
-                  {formatCurrency(payment.credit || 0)}
-                </span>
+
+      {/* ── Payment Groups ── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {paymentGroups.map((group, i) => {
+          const Icon = group.icon;
+          const SolidIcon = group.solidIcon;
+          return (
+            <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all duration-300 group">
+              {/* Header card */}
+              <div className={`px-5 py-4 bg-gradient-to-r ${group.color} flex items-start gap-3`}>
+                <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+                  <SolidIcon className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm leading-tight">{group.category}</h3>
+                  <p className="text-white/75 text-xs mt-0.5 leading-snug">{group.desc}</p>
+                </div>
+              </div>
+
+              {/* Methods list */}
+              <div className="p-4 space-y-2">
+                {group.methods.map((m, j) => (
+                  <div key={j} className="flex items-center gap-3 px-3 py-2.5 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors">
+                    <div className={`w-7 h-7 rounded-lg ${group.bgLight} flex items-center justify-center flex-shrink-0`}>
+                      <Icon className={`w-4 h-4 ${group.textColor}`} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-900 text-sm">{m.name}</p>
+                      <p className="text-xs text-gray-400 truncate">{m.desc}</p>
+                    </div>
+                    <CheckCircleIcon className="w-4 h-4 text-green-500 flex-shrink-0" />
+                  </div>
+                ))}
               </div>
             </div>
-          ))
-        )}
+          );
+        })}
       </div>
-    </div>
 
-    {/* Top Up Form */}
-    {paymentData.length > 0 && (
-      <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-lg p-8">
-        <div className="flex items-center mb-6">
-          <div className="w-1 h-6 bg-gradient-to-b from-[#4F46E5] to-[#7C3AED] rounded mr-3"></div>
-          <h3 className="text-2xl font-bold text-gray-900">Top Up Saldo</h3>
+      {/* ── How to Pay ── */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-gray-50">
+          <h3 className="font-bold text-gray-900 text-sm">Cara Melakukan Pembayaran</h3>
+          <p className="text-xs text-gray-400 mt-0.5">4 langkah mudah untuk menyelesaikan pesanan</p>
         </div>
-        <form onSubmit={handleAddCredit} className="space-y-6">
-          <div>
-            <label htmlFor="paymentSelect" className="block text-sm font-medium text-gray-700 mb-2">
-              Pilih Metode Pembayaran
-            </label>
-            <select
-              id="paymentSelect"
-              value={selectedPayment || ''}
-              onChange={(e) => setSelectedPayment(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-[#4F46E5] focus:border-[#4F46E5] bg-white text-gray-900"
-              disabled={isLoading}
-            >
-              <option value="">Pilih metode pembayaran</option>
-              {paymentData.map((payment) => (
-                <option key={payment._id} value={payment._id}>
-                  {payment.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label htmlFor="amount" className="block text-sm font-medium text-gray-700 mb-2">
-              Jumlah Top Up
-            </label>
-            <input
-              id="amount"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="Masukkan jumlah"
-              className="w-full p-3 border border-gray-300 rounded-lg focus:ring-[#4F46E5] focus:border-[#4F46E5] bg-white text-gray-900"
-              disabled={isLoading || !selectedPayment}
-              min="10000"
-              step="10000"
-            />
-            <p className="text-sm text-gray-500 mt-2">Minimal top up Rp10.000</p>
-          </div>
-          <button
-            type="submit"
-            className="w-full inline-flex justify-center items-center px-8 py-3 bg-[#4F46E5] text-white font-medium rounded-lg shadow-lg shadow-indigo-500/30 hover:bg-[#4F46E5]/90 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-            disabled={isLoading || !selectedPayment || !amount || amount < 10000}
-          >
-            {isLoading ? (
-              <>
-                <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                Memproses...
-              </>
-            ) : 'Top Up Saldo'}
-          </button>
-        </form>
-      </div>
-    )}
-  </div>
-);
-
-const ManagePaymentMethods = ({ 
-  newPaymentName, 
-  setNewPaymentName, 
-  handleAddPayment,
-  isLoading 
-}) => (
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-    <h3 className="text-lg font-semibold mb-4">Tambah Metode Pembayaran</h3>
-    <form onSubmit={handleAddPayment}>
-      <div className="space-y-4">
-        <div>
-          <label htmlFor="paymentName" className="block text-sm font-medium text-gray-700 mb-1">
-            Nama Metode Pembayaran
-          </label>
-          <input
-            id="paymentName"
-            type="text"
-            value={newPaymentName}
-            onChange={(e) => setNewPaymentName(e.target.value)}
-            placeholder="Contoh: Bank BCA, OVO, dll"
-            className="w-full p-2 border border-gray-300 rounded-md focus:ring-[#4F46E5] focus:border-[#4F46E5]"
-            disabled={isLoading}
-          />
-        </div>
-        <button
-          type="submit"
-          className="w-full bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white py-2 px-4 rounded-md hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#4F46E5] focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-          disabled={isLoading || !newPaymentName.trim()}
-        >
-          {isLoading ? 'Memproses...' : 'Tambah Metode Pembayaran'}
-        </button>
-      </div>
-    </form>
-  </div>
-);
-
-const Payment = ({ paymentData, setDashboardData }) => {
-  const [newPaymentName, setNewPaymentName] = useState('');
-  const [amount, setAmount] = useState('');
-  const [selectedPayment, setSelectedPayment] = useState(null);
-  const [activeTab, setActiveTab] = useState('balance');
-  const [isLoading, setIsLoading] = useState(false);
-  const { token } = useContext(AuthContext);
-  const apiUrl = process.env.REACT_APP_API_BASE_URL;
-
-  const handleAddPayment = async (e) => {
-    e.preventDefault();
-    if (!newPaymentName.trim()) {
-      toast.error('Nama metode pembayaran harus diisi');
-      return;
-    }
-    
-    setIsLoading(true);
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      await axios.post(
-        `${apiUrl}/user/payment`,
-        { name: newPaymentName },
-        { headers }
-      );
-      toast.success('Metode pembayaran berhasil ditambahkan');
-      setNewPaymentName('');
-      setDashboardData(prev => ({
-        ...prev,
-        paymentData: [...prev.paymentData, {
-          _id: Date.now(),
-          name: newPaymentName,
-          credit: 0
-        }]
-      }));
-    } catch (error) {
-      console.error('Error adding payment method:', error);
-      toast.error(error.response?.data?.message || 'Gagal menambahkan metode pembayaran');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleAddCredit = async (e) => {
-    e.preventDefault();
-    if (!selectedPayment || !amount) {
-      toast.error('Pilih metode pembayaran dan masukkan jumlah');
-      return;
-    }
-    if (amount < 10000) {
-      toast.error('Minimal top up Rp10.000');
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      await axios.post(
-        `${apiUrl}/user/payment/${selectedPayment}?amount=${amount}`,
-        {},
-        { headers: { Authorization: `Bearer ${token}` }}
-      );
-
-      toast.success('Top up berhasil');
-      setAmount('');
-      setSelectedPayment(null);
-      
-      // Refresh page to show updated balance
-      if (typeof window !== 'undefined') {
-        window.location.reload();
-      }
-    } catch (error) {
-      console.error('Error adding credit:', error);
-      toast.error(error.response?.data?.message || 'Gagal melakukan top up');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
-
-  const handleDeletePayment = async (paymentId) => {
-    try {
-      // Simulasi penghapusan payment method
-      // Dalam implementasi nyata, ini akan memanggil API
-      setDashboardData(prev => ({
-        ...prev,
-        paymentData: prev.paymentData.filter(p => p._id !== paymentId)
-      }));
-      
-      toast.success('Metode pembayaran berhasil dihapus');
-    } catch (error) {
-      toast.error('Gagal menghapus metode pembayaran');
-    }
-  };
-
-  return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Tab Navigation */}
-      <div className="flex space-x-1 bg-gray-100 p-1 rounded-lg">
-        <button
-          onClick={() => setActiveTab('balance')}
-          className={`flex-1 py-2 px-4 rounded-md transition-colors ${
-            activeTab === 'balance'
-              ? 'bg-white text-[#4F46E5] shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Saldo & Top Up
-        </button>
-        <button
-          onClick={() => setActiveTab('manage')}
-          className={`flex-1 py-2 px-4 rounded-md transition-colors ${
-            activeTab === 'manage'
-              ? 'bg-white text-[#4F46E5] shadow-sm'
-              : 'text-gray-600 hover:text-gray-900'
-          }`}
-        >
-          Kelola Metode Pembayaran
-        </button>
-      </div>
-
-      {/* Tab Content */}
-      {activeTab === 'balance' ? (
-        <BalanceAndTopUp
-          paymentData={paymentData}
-          selectedPayment={selectedPayment}
-          setSelectedPayment={setSelectedPayment}
-          amount={amount}
-          setAmount={setAmount}
-          handleAddCredit={handleAddCredit}
-          formatCurrency={formatCurrency}
-          isLoading={isLoading}
-        />
-      ) : (
-        <div>
-          <ManagePaymentMethods
-            newPaymentName={newPaymentName}
-            setNewPaymentName={setNewPaymentName}
-            handleAddPayment={handleAddPayment}
-            isLoading={isLoading}
-          />
-          <div className="space-y-4">
-            {paymentData.length === 0 ? (
-              <p className="text-gray-500 text-center py-4">
-                Belum ada metode pembayaran yang tersimpan
-              </p>
-            ) : (
-              paymentData.map((payment) => (
-                <div
-                  key={payment._id}
-                  className="flex justify-between items-center p-4 bg-white border rounded-lg shadow-sm"
-                >
-                  <div>
-                    <p className="font-medium">{payment.name}</p>
-                    <p className="text-sm text-gray-600">
-                      Saldo: {formatCurrency(payment.credit || 0)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleDeletePayment(payment._id)}
-                    className="text-red-500 hover:text-red-600 transition-colors"
-                  >
-                    Hapus
-                  </button>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-0 divide-x divide-y sm:divide-y-0 divide-gray-50">
+          {steps.map((step, i) => {
+            const StepIcon = step.icon;
+            return (
+              <div key={i} className="flex flex-col items-center text-center p-5">
+                <div className="w-12 h-12 bg-gradient-to-br from-[#4F46E5]/10 to-[#7C3AED]/10 rounded-xl flex items-center justify-center mb-3">
+                  <StepIcon className="w-6 h-6 text-[#4F46E5]" />
                 </div>
-              ))
-            )}
-          </div>
+                <span className="text-xs font-bold text-[#4F46E5] mb-1">Step {i + 1}</span>
+                <p className="font-semibold text-gray-900 text-sm mb-1">{step.label}</p>
+                <p className="text-xs text-gray-400 leading-relaxed">{step.desc}</p>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
+
+      {/* ── Security Banner ── */}
+      <div className="rounded-2xl bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] p-6">
+        <div className="flex items-center gap-2 mb-4 justify-center">
+          <ShieldCheckIcon className="w-5 h-5 text-white" />
+          <h3 className="font-bold text-white text-sm">Transaksi Anda Terlindungi</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {securityBadges.map((badge, i) => {
+            const BadgeIcon = badge.icon;
+            return (
+              <div key={i} className="bg-white/10 backdrop-blur-sm rounded-xl p-4 text-center border border-white/20">
+                <BadgeIcon className="w-6 h-6 text-white mx-auto mb-2" />
+                <p className="font-semibold text-white text-sm">{badge.title}</p>
+                <p className="text-white/65 text-xs mt-0.5">{badge.desc}</p>
+              </div>
+            );
+          })}
+        </div>
+        <p className="text-white/50 text-xs text-center mt-4">
+          Semua transaksi diproses melalui{' '}
+          <strong className="text-white/90">Midtrans</strong>, payment gateway terpercaya di Indonesia.
+        </p>
+      </div>
+
+      {/* ── CTA ── */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <Link
+          to="/all-products"
+          className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/30 hover:-translate-y-0.5 hover:shadow-xl transition-all duration-300 text-sm"
+        >
+          <ShoppingCartIcon className="w-4 h-4" />
+          Mulai Belanja Sekarang
+        </Link>
+        <Link
+          to="/payment-info"
+          className="flex-1 inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-white text-[#4F46E5] font-semibold rounded-xl border border-[#4F46E5]/20 hover:bg-indigo-50 transition-all duration-300 text-sm"
+        >
+          Info Lengkap Pembayaran
+          <ArrowRightIcon className="w-4 h-4" />
+        </Link>
+      </div>
     </div>
   );
 };

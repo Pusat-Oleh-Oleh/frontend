@@ -163,7 +163,7 @@ function Nav() {
                   Produk
                 </button>
                 <button
-                  onClick={() => scrollToSection("blog")}
+                  onClick={() => navigate("/articlehomepage")}
                   className="text-gray-600 hover:text-[#4F46E5] font-medium transition-colors"
                 >
                   Blog
@@ -210,12 +210,18 @@ function Nav() {
 
                 {isAuthenticated ? (
                 <>
-                  <button className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all">
-                  <BellIcon className="h-6 w-6" />
-                </button>
-                <button className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all">
-                  <EnvelopeIcon className="h-6 w-6" />
-                </button>
+                  <button 
+                    onClick={() => handleProtectedNavigation('/notifications')}
+                    className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all"
+                  >
+                   <BellIcon className="h-6 w-6" />
+                 </button>
+                 <button 
+                    onClick={() => handleProtectedNavigation('/messages')}
+                    className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all"
+                  >
+                   <EnvelopeIcon className="h-6 w-6" />
+                 </button>
                 <button
                   onClick={() => handleProtectedNavigation("/cart")}
                   className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all relative"
@@ -315,7 +321,7 @@ function Nav() {
                 </button>
                 <button
                   onClick={() => {
-                    scrollToSection("blog");
+                    navigate("/articlehomepage");
                     setIsMobileMenuOpen(false);
                   }}
                   className="text-gray-600 hover:text-[#4F46E5] font-medium transition-colors py-2"
@@ -329,12 +335,18 @@ function Nav() {
               <>
                  
                 <div className="flex space-x-4">
-                  <button className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all">
-                    <BellIcon className="h-6 w-6" />
-                  </button>
-                  <button className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all">
-                    <EnvelopeIcon className="h-6 w-6" />
-                  </button>
+                  <button 
+                    onClick={() => handleProtectedNavigation('/notifications')}
+                    className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all"
+                  >
+                     <BellIcon className="h-6 w-6" />
+                   </button>
+                   <button 
+                    onClick={() => handleProtectedNavigation('/messages')}
+                    className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all"
+                  >
+                     <EnvelopeIcon className="h-6 w-6" />
+                   </button>
                   <button
                     onClick={() => handleProtectedNavigation("/cart")}
                     className="p-2 text-gray-600 hover:text-[#4F46E5] hover:bg-gray-100 rounded-lg transition-all relative"

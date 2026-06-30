@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import axios from 'axios';
@@ -9,6 +10,7 @@ import "swiper/css/pagination";
 const Hero = () => {
   const [banners, setBanners] = useState([]);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   
   const apiUrl = process.env.REACT_APP_API_BASE_URL;
   const cdnUrl = process.env.REACT_APP_CDN_BASE_URL;
@@ -67,12 +69,14 @@ const Hero = () => {
       subtitle: "Karya Terbaik dari Pengrajin Lokal",
       description: "Temukan koleksi kerajinan tangan berkualitas tinggi yang dibuat dengan cinta oleh para pengrajin lokal terbaik.",
       cta: "Jelajahi Koleksi",
+      ctaLink: "/kerajinan",
     },
     {
       title: "Oleh-oleh Khas Daerah",
       subtitle: "Cita Rasa Nusantara",
       description: "Nikmati berbagai pilihan oleh-oleh khas dari berbagai daerah di Indonesia, langsung dari produsen terpercaya.",
       cta: "Lihat Produk",
+      ctaLink: "/oleh-oleh",
     },
   ];
 
@@ -131,13 +135,19 @@ const Hero = () => {
                                 {slides[index % slides.length].description}
                               </p>
                               <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
-                                <button className="group/btn inline-flex items-center justify-center px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3 bg-white text-[#4F46E5] text-sm sm:text-base font-medium rounded-lg hover:bg-gray-50 transition-all duration-300 shadow-lg shadow-black/5">
+                                <button 
+                                  onClick={() => navigate(slides[index % slides.length].ctaLink)}
+                                  className="group/btn inline-flex items-center justify-center px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3 bg-white text-[#4F46E5] text-sm sm:text-base font-medium rounded-lg hover:bg-gray-50 transition-all duration-300 shadow-lg shadow-black/5"
+                                >
                                   <span className="mr-1.5 sm:mr-2">{slides[index % slides.length].cta}</span>
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 sm:h-5 sm:w-5 transform transition-transform duration-300 group-hover/btn:translate-x-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path fillRule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clipRule="evenodd" />
                                   </svg>
                                 </button>
-                                <button className="px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3 bg-transparent border-2 border-white text-white text-sm sm:text-base font-medium rounded-lg hover:bg-white/10 transition-colors duration-300">
+                                <button 
+                                  onClick={() => navigate('/about')}
+                                  className="px-4 sm:px-6 md:px-8 py-2 sm:py-2.5 md:py-3 bg-transparent border-2 border-white text-white text-sm sm:text-base font-medium rounded-lg hover:bg-white/10 transition-colors duration-300"
+                                >
                                   Pelajari Lebih Lanjut
                                 </button>
                               </div>

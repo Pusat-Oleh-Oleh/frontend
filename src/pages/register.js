@@ -1,9 +1,13 @@
-import React, { useState } from "react";
+import React, { useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import toast from 'react-hot-toast';
+import { GoogleLogin } from "@react-oauth/google";
+import axios from "axios";
+import { AuthContext } from "../components/context/AuthContext";
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { login } = useContext(AuthContext);
   const apiUrl = process.env.REACT_APP_API_BASE_URL;
 
   // State untuk input formulir
@@ -16,6 +20,7 @@ function RegisterPage() {
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Tangani perubahan input
   const handleChange = (e) => {
@@ -63,6 +68,49 @@ function RegisterPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Handle Google Register/Login
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setGoogleLoading(true);
+    setError("");
+
+    try {
+      const response = await axios.post(`${apiUrl}/auth/google/login`, {
+        credential: credentialResponse.credential,
+      });
+
+      const { token } = response.data;
+
+      // Gunakan fungsi login dari AuthContext
+      login(token);
+
+      // Redirect berdasarkan role
+      const decodedToken = JSON.parse(atob(token.split(".")[1]));
+      const role = decodedToken.role;
+
+      toast.success("Daftar dengan Google berhasil!");
+
+      if (role === "buyer") {
+        navigate("/");
+      } else if (role === "seller") {
+        navigate("/dashboard-seller");
+      } else {
+        navigate("/");
+      }
+    } catch (err) {
+      console.error("Google register error:", err);
+      const message = err.response?.data?.message || "Daftar dengan Google gagal. Coba lagi.";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
+  const handleGoogleError = () => {
+    setError("Daftar dengan Google gagal. Coba lagi.");
+    toast.error("Daftar dengan Google gagal.");
   };
 
   const handleLoginRedirect = () => {
@@ -155,6 +203,7 @@ function RegisterPage() {
             </button>
           </form>
 
+          {/* Divider */}
           <div className="mt-4 relative">
             <div className="absolute inset-0 flex items-center">
               <div className="w-full border-t border-gray-300"></div>
@@ -164,18 +213,28 @@ function RegisterPage() {
             </div>
           </div>
 
-          <div className="mt-4">
-            <button
-              type="button"
-              className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-            >
-              <img
-                className="h-5 w-5 mr-2"
-                src="/google.svg"
-                alt="Google logo"
+          {/* Google Register Button */}
+          <div className="mt-4 flex justify-center">
+            {googleLoading ? (
+              <div className="w-full flex items-center justify-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-500 bg-gray-50">
+                <svg className="animate-spin h-5 w-5 mr-2 text-[#4F46E5]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Memproses...
+              </div>
+            ) : (
+              <GoogleLogin
+                onSuccess={handleGoogleSuccess}
+                onError={handleGoogleError}
+                theme="outline"
+                size="large"
+                width="100%"
+                text="signup_with"
+                shape="rectangular"
+                logo_alignment="left"
               />
-              Daftar dengan Google
-            </button>
+            )}
           </div>
 
           <footer className="mt-8 text-center text-xs text-gray-500">
