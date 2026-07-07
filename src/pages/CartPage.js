@@ -70,22 +70,15 @@ const CartPage = () => {
       const response = await axios.get(`${$apiUrl}/cart`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      // Handle both array response and legacy object response format
-      const cartData = Array.isArray(response.data)
-        ? response.data
-        : Array.isArray(response.data?.cart)
-        ? response.data.cart
-        : [];
-
-      setCartItems(cartData);
+      setCartItems(Array.isArray(response.data) ? response.data : []);
       
       // Initialize selected items
-      const itemIds = cartData.map(item => item._id);
+      const itemIds = response.data.map(item => item._id);
       setSelectedItems(itemIds);
       
       // Initialize local quantities
       const quantities = {};
-      cartData.forEach(item => {
+      response.data.forEach(item => {
         quantities[item._id] = item.quantity;
       });
       setLocalQuantities(quantities);
@@ -276,22 +269,15 @@ const CartPage = () => {
           acc[shopId] = {
             shopId: shopId,
             shopName: item.productId.shopId.name,
-            shopCity: item.productId.shopId.address?.city || '',
             products: []
           };
         }
         
-        // BUGFIX: use localQuantities[item._id] instead of item.quantity
-        // so user-updated quantities (not yet saved) are reflected in checkout
-        const currentQty = localQuantities[item._id] ?? item.quantity;
-
         acc[shopId].products.push({
-          cartId: item._id,
           productId: item.productId._id,
           name: item.productId.name,
           price: item.productId.price,
-          quantity: currentQty,
-          weight: item.productId.weight || 1000, // berat dalam gram
+          quantity: item.quantity,
           image: normalizeUrl(item.productCover),
           stock: item.productId.stock
         });
@@ -301,8 +287,7 @@ const CartPage = () => {
 
       // Convert to array format expected by checkout
       const checkoutData = {
-        shops: Object.values(groupedByShop),
-        cartItemIds: selectedItems // pass selected cart IDs for cleanup after payment
+        shops: Object.values(groupedByShop)
       };
 
       localStorage.setItem('checkoutItems', JSON.stringify(checkoutData));

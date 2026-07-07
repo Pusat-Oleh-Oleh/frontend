@@ -22,15 +22,9 @@ const ProductDetail = () => {
 
   const handleAddToCart = async (quantity) => {
     if (!isAuthenticated) {
-      toast.error("Silakan login terlebih dahulu");
+      toast.error("Please login to add items to cart");
       navigate('/login');
-      return false;
-    }
-
-    if (!token) {
-      toast.error("Sesi login tidak valid, silakan login ulang");
-      navigate('/login');
-      return false;
+      return;
     }
 
     try {
@@ -43,15 +37,11 @@ const ProductDetail = () => {
           }
         }
       );
-      toast.success("Produk berhasil ditambahkan ke keranjang!");
-      return true;
+      toast.success("Product added to cart successfully!");
     } catch (error) {
-      console.error('Add to cart error:', error.response?.data || error.message);
-      toast.error(error.response?.data?.message || "Gagal menambahkan produk ke keranjang");
-      return false;
+      toast.error(error.response?.data?.message || "Failed to add product to cart");
     }
   };
-
 
   const addToWishlist = async () => {
     if (!isAuthenticated) {
