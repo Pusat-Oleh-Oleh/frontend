@@ -22,6 +22,12 @@ function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
 
+  // State untuk modal pilih role Google
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [pendingCredential, setPendingCredential] = useState(null);
+  const [selectedRole, setSelectedRole] = useState("buyer");
+  const [roleSubmitting, setRoleSubmitting] = useState(false);
+
   // Tangani perubahan input
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -70,47 +76,52 @@ function RegisterPage() {
     }
   };
 
-  // Handle Google Register/Login
+  // Ketika Google berhasil mengembalikan credential → tampilkan modal pilih role
   const handleGoogleSuccess = async (credentialResponse) => {
-    setGoogleLoading(true);
+    setPendingCredential(credentialResponse.credential);
+    setSelectedRole("buyer");
+    setShowRoleModal(true);
+  };
+
+  const handleGoogleError = () => {
+    setError("Daftar dengan Google gagal. Coba lagi.");
+    toast.error("Daftar dengan Google gagal.");
+  };
+
+  // Setelah user memilih role di modal → kirim ke backend
+  const handleRoleSubmit = async () => {
+    if (!pendingCredential) return;
+    setRoleSubmitting(true);
     setError("");
 
     try {
-      const response = await axios.post(`${apiUrl}/auth/google/login`, {
-        credential: credentialResponse.credential,
+      const response = await axios.post(`${apiUrl}/auth/google/register`, {
+        credential: pendingCredential,
+        role: selectedRole,
       });
 
       const { token } = response.data;
-
-      // Gunakan fungsi login dari AuthContext
       login(token);
 
-      // Redirect berdasarkan role
-      const decodedToken = JSON.parse(atob(token.split(".")[1]));
-      const role = decodedToken.role;
+      toast.success(`Daftar sebagai ${selectedRole === "buyer" ? "Buyer" : "Seller"} berhasil!`);
 
-      toast.success("Daftar dengan Google berhasil!");
+      setShowRoleModal(false);
+      setPendingCredential(null);
 
-      if (role === "buyer") {
+      if (selectedRole === "buyer") {
         navigate("/");
-      } else if (role === "seller") {
-        navigate("/dashboard-seller");
       } else {
-        navigate("/");
+        navigate("/dashboard-seller");
       }
     } catch (err) {
       console.error("Google register error:", err);
       const message = err.response?.data?.message || "Daftar dengan Google gagal. Coba lagi.";
       setError(message);
       toast.error(message);
+      setShowRoleModal(false);
     } finally {
-      setGoogleLoading(false);
+      setRoleSubmitting(false);
     }
-  };
-
-  const handleGoogleError = () => {
-    setError("Daftar dengan Google gagal. Coba lagi.");
-    toast.error("Daftar dengan Google gagal.");
   };
 
   const handleLoginRedirect = () => {
@@ -183,15 +194,6 @@ function RegisterPage() {
               />
             </div>
 
-            <div className="text-right">
-              <button 
-                type="button"
-                className="text-[#4F46E5] text-sm hover:text-[#4338CA]"
-              >
-                Lupa password?
-              </button>
-            </div>
-
             <button
               type="submit"
               className={`w-full py-3 px-4 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white font-medium rounded-lg shadow-lg shadow-indigo-500/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 ${
@@ -199,7 +201,7 @@ function RegisterPage() {
               }`}
               disabled={loading}
             >
-              {loading ? "Loading..." : "Buat Akun"}
+              {loading ? "Loading..." : "Buat Akun Buyer"}
             </button>
           </form>
 
@@ -209,7 +211,7 @@ function RegisterPage() {
               <div className="w-full border-t border-gray-300"></div>
             </div>
             <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">atau</span>
+              <span className="px-2 bg-white/80 text-gray-500">atau</span>
             </div>
           </div>
 
@@ -247,6 +249,125 @@ function RegisterPage() {
           <img className="object-cover w-full h-full" src="/placeholder.png" alt="Placeholder" />
         </div>
       </div>
+
+      {/* Modal Pilih Role Google */}
+      {showRoleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-sm animate-[fadeInScale_0.2s_ease-out]">
+            {/* Header */}
+            <div className="flex items-center justify-center mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-[#4F46E5] to-[#7C3AED] rounded-full flex items-center justify-center shadow-lg shadow-indigo-500/30">
+                <svg className="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+              </div>
+            </div>
+
+            <h2 className="text-xl font-bold text-center text-gray-800 mb-2">
+              Daftar sebagai apa?
+            </h2>
+            <p className="text-sm text-center text-gray-500 mb-6">
+              Pilih tipe akun yang ingin kamu buat
+            </p>
+
+            {/* Pilihan Role */}
+            <div className="grid grid-cols-2 gap-3 mb-6">
+              {/* Buyer */}
+              <button
+                id="google-register-role-buyer"
+                onClick={() => setSelectedRole("buyer")}
+                className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+                  selectedRole === "buyer"
+                    ? "border-[#4F46E5] bg-indigo-50 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-indigo-300 hover:bg-indigo-50/40"
+                }`}
+              >
+                {selectedRole === "buyer" && (
+                  <span className="absolute top-2 right-2 w-4 h-4 bg-[#4F46E5] rounded-full flex items-center justify-center">
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                )}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedRole === "buyer" ? "bg-[#4F46E5]" : "bg-gray-100"}`}>
+                  <svg className={`w-5 h-5 ${selectedRole === "buyer" ? "text-white" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                  </svg>
+                </div>
+                <span className={`text-sm font-semibold ${selectedRole === "buyer" ? "text-[#4F46E5]" : "text-gray-600"}`}>
+                  Buyer
+                </span>
+                <span className={`text-xs text-center leading-tight ${selectedRole === "buyer" ? "text-indigo-400" : "text-gray-400"}`}>
+                  Belanja produk pilihan
+                </span>
+              </button>
+
+              {/* Seller */}
+              <button
+                id="google-register-role-seller"
+                onClick={() => setSelectedRole("seller")}
+                className={`relative flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all duration-200 ${
+                  selectedRole === "seller"
+                    ? "border-[#7C3AED] bg-violet-50 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-violet-300 hover:bg-violet-50/40"
+                }`}
+              >
+                {selectedRole === "seller" && (
+                  <span className="absolute top-2 right-2 w-4 h-4 bg-[#7C3AED] rounded-full flex items-center justify-center">
+                    <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </span>
+                )}
+                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${selectedRole === "seller" ? "bg-[#7C3AED]" : "bg-gray-100"}`}>
+                  <svg className={`w-5 h-5 ${selectedRole === "seller" ? "text-white" : "text-gray-500"}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m5-9v9m4-9v9m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                </div>
+                <span className={`text-sm font-semibold ${selectedRole === "seller" ? "text-[#7C3AED]" : "text-gray-600"}`}>
+                  Seller
+                </span>
+                <span className={`text-xs text-center leading-tight ${selectedRole === "seller" ? "text-violet-400" : "text-gray-400"}`}>
+                  Jual produk kamu
+                </span>
+              </button>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-col gap-2">
+              <button
+                id="google-register-confirm"
+                onClick={handleRoleSubmit}
+                disabled={roleSubmitting}
+                className={`w-full py-3 px-4 bg-gradient-to-r from-[#4F46E5] to-[#7C3AED] text-white font-semibold rounded-xl shadow-lg shadow-indigo-500/30 hover:shadow-xl transition-all duration-300 hover:-translate-y-0.5 ${roleSubmitting ? "opacity-60 cursor-not-allowed" : ""}`}
+              >
+                {roleSubmitting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                    </svg>
+                    Memproses...
+                  </span>
+                ) : (
+                  `Daftar sebagai ${selectedRole === "buyer" ? "Buyer" : "Seller"}`
+                )}
+              </button>
+              <button
+                id="google-register-cancel"
+                onClick={() => {
+                  setShowRoleModal(false);
+                  setPendingCredential(null);
+                }}
+                disabled={roleSubmitting}
+                className="w-full py-2.5 px-4 border border-gray-200 text-gray-600 font-medium rounded-xl hover:bg-gray-50 transition-all duration-200"
+              >
+                Batal
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

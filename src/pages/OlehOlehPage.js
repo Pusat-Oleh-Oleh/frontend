@@ -101,7 +101,7 @@ const OlehOlehPage = () => {
 
       {/* ═══════════════════ HERO SECTION ═══════════════════ */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#92400e] via-[#b45309] to-[#d97706]" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[#1e1b4b] via-[#4c1d95] to-[#7c3aed]" />
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmYiIGZpbGwtb3BhY2l0eT0iMC4wNSI+PHBhdGggZD0iTTM2IDM0djJIMjR2LTJoMTJ6TTM2IDI0djJIMjR2LTJoMTJ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-30" />
         <div className="absolute top-10 right-10 w-72 h-72 bg-yellow-400/10 rounded-full blur-3xl" />
         <div className="absolute bottom-10 left-10 w-60 h-60 bg-orange-300/10 rounded-full blur-3xl" />
@@ -170,8 +170,8 @@ const OlehOlehPage = () => {
             onClick={() => setSelectedCategory('Semua')}
             className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 whitespace-nowrap ${
               selectedCategory === 'Semua'
-                ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30'
-                : 'text-gray-600 hover:bg-amber-50'
+                ? 'bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white shadow-lg shadow-purple-500/30'
+                : 'text-gray-600 hover:bg-purple-50'
             }`}
           >
             Semua Daerah
@@ -182,8 +182,8 @@ const OlehOlehPage = () => {
               onClick={() => setSelectedCategory(cat._id)}
               className={`px-5 py-2.5 rounded-xl text-sm font-medium transition-all duration-300 whitespace-nowrap ${
                 selectedCategory === cat._id
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-500/30'
-                  : 'text-gray-600 hover:bg-amber-50'
+                  ? 'bg-gradient-to-r from-[#7c3aed] to-[#a855f7] text-white shadow-lg shadow-purple-500/30'
+                : 'text-gray-600 hover:bg-purple-50'
               }`}
             >
               {cat.name}
